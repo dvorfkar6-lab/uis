@@ -398,7 +398,7 @@ function MacLib:Window(Settings)
 	title.TextTransparency = 0.1
 	title.TextTruncate = Enum.TextTruncate.SplitWord
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.TextYAlignment = Enum.TextYAlignment.Top
+	title.TextYAlignment = Enum.TextYAlignment.Center
 	title.AutomaticSize = Enum.AutomaticSize.Y
 	title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	title.BackgroundTransparency = 1
@@ -438,6 +438,11 @@ function MacLib:Window(Settings)
 	titleFrameUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	titleFrameUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	titleFrameUIListLayout.Parent = titleFrame
+
+	local titleFrameUIPadding = Instance.new("UIPadding")
+	titleFrameUIPadding.Name = "TitleFrameUIPadding"
+	titleFrameUIPadding.PaddingTop = UDim.new(0, 10)
+	titleFrameUIPadding.Parent = titleFrame
 
 	titleFrame.Parent = informationHolder
 
@@ -558,6 +563,29 @@ function MacLib:Window(Settings)
 	discordText.BorderSizePixel = 0
 	discordText.LayoutOrder = 2
 	discordText.Parent = textContainer
+
+	local keyTimerText = Instance.new("TextLabel")
+	keyTimerText.Name = "KeyTimerText"
+	keyTimerText.FontFace = Font.new(
+		assets.interFont,
+		Enum.FontWeight.SemiBold,
+		Enum.FontStyle.Normal
+	)
+	keyTimerText.Text = ""
+	keyTimerText.TextColor3 = Color3.fromRGB(252, 190, 57)
+	keyTimerText.TextSize = 11
+	keyTimerText.TextTransparency = 0.4
+	keyTimerText.TextTruncate = Enum.TextTruncate.SplitWord
+	keyTimerText.TextXAlignment = Enum.TextXAlignment.Left
+	keyTimerText.TextYAlignment = Enum.TextYAlignment.Top
+	keyTimerText.AutomaticSize = Enum.AutomaticSize.XY
+	keyTimerText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	keyTimerText.BackgroundTransparency = 1
+	keyTimerText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	keyTimerText.BorderSizePixel = 0
+	keyTimerText.LayoutOrder = 3
+	keyTimerText.Visible = false
+	keyTimerText.Parent = textContainer
 
 	local userInfoUIPadding = Instance.new("UIPadding")
 	userInfoUIPadding.Name = "UserInfoUIPadding"
@@ -5447,6 +5475,10 @@ function MacLib:Window(Settings)
 			activeMinimizerGui:Destroy()
 			activeMinimizerGui = nil
 		end
+		if keyTimerConnection then
+			keyTimerConnection:Disconnect()
+			keyTimerConnection = nil
+		end
 		macLib:Destroy()
 		unloaded = true
 	end
@@ -5813,6 +5845,76 @@ function MacLib:Window(Settings)
 		end
 
 		return out
+	end
+
+	local keyTimerConnection = nil
+
+	function WindowFunctions:SetKeyTimer(expiresAt)
+		if keyTimerConnection then
+			keyTimerConnection:Disconnect()
+			keyTimerConnection = nil
+		end
+
+		if not expiresAt or expiresAt == "" then
+			keyTimerText.Visible = false
+			return
+		end
+
+		local function ParseISO8601(isoString)
+			local year, month, day, hour, min, sec = isoString:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):([%d%.]+)")
+			if not year then return nil end
+
+			return os.time({
+				year = tonumber(year),
+				month = tonumber(month),
+				day = tonumber(day),
+				hour = tonumber(hour),
+				min = tonumber(min),
+				sec = math.floor(tonumber(sec))
+			})
+		end
+
+		local function FormatTimeRemaining(seconds)
+			if seconds <= 0 then
+				return "Key: Expired"
+			end
+
+			local days = math.floor(seconds / 86400)
+			local hours = math.floor((seconds % 86400) / 3600)
+			local minutes = math.floor((seconds % 3600) / 60)
+			local secs = math.floor(seconds % 60)
+
+			if days > 0 then
+				return string.format("Key: %dd %dh %dm %ds", days, hours, minutes, secs)
+			elseif hours > 0 then
+				return string.format("Key: %dh %dm %ds", hours, minutes, secs)
+			else
+				return string.format("Key: %dm %ds", minutes, secs)
+			end
+		end
+
+		local expiryTime = ParseISO8601(expiresAt)
+		if not expiryTime then
+			keyTimerText.Text = "Key: Invalid date"
+			keyTimerText.Visible = true
+			return
+		end
+
+		keyTimerText.Visible = true
+
+		local function UpdateTimer()
+			local currentTime = os.time()
+			local remaining = expiryTime - currentTime
+			keyTimerText.Text = FormatTimeRemaining(remaining)
+
+			if remaining <= 0 and keyTimerConnection then
+				keyTimerConnection:Disconnect()
+				keyTimerConnection = nil
+			end
+		end
+
+		UpdateTimer()
+		keyTimerConnection = RunService.Heartbeat:Connect(UpdateTimer)
 	end
 
 	function WindowFunctions:CreateMinimizer(Config)
