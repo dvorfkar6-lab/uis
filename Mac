@@ -5696,14 +5696,24 @@ function MacLib:Window(Settings)
 	end
 
 	local function GetGameFolder()
-		local gameId = tostring(game.PlaceId)
-		local gamePath = MacLib.Folder .. "/settings/" .. gameId
+		-- Определяем старый и новый пути
+		local placeId = tostring(game.PlaceId)
+		local creatorId = tostring(game.CreatorId)
+		
+		local oldPath = MacLib.Folder .. "/settings/" .. placeId
+		local newPath = MacLib.Folder .. "/settings/" .. creatorId
 
-		if not isfolder(gamePath) then
-			makefolder(gamePath)
+		-- 1. ПРОВЕРКА: Если у игрока уже есть папка со старым ID, используем её
+		if isfolder(oldPath) then
+			return oldPath
 		end
 
-		return gamePath
+		-- 2. Если старой папки нет, работаем с новой (CreatorId)
+		if not isfolder(newPath) then
+			makefolder(newPath)
+		end
+
+		return newPath
 	end
 
 	function MacLib:LoadAutoLoadConfig()
