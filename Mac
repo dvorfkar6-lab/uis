@@ -1499,7 +1499,7 @@ function MacLib:Window(Settings)
 			elementsScrolling.BottomImage = ""
 			elementsScrolling.CanvasSize = UDim2.new()
 			elementsScrolling.ScrollBarImageTransparency = 0.5
-			elementsScrolling.ScrollBarThickness = 1
+			elementsScrolling.ScrollBarThickness = 5
 			elementsScrolling.TopImage = ""
 			elementsScrolling.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 			elementsScrolling.BackgroundTransparency = 1
