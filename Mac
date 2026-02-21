@@ -2646,19 +2646,20 @@ function MacLib:Window(Settings)
 					dropdownFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					dropdownFrame.BorderSizePixel = 0
 					dropdownFrame.ClipsDescendants = true
-					dropdownFrame.Position = UDim2.new(0, 0, 0, 30)
-					dropdownFrame.Size = UDim2.new(1, 0, 1, 0) 
+					dropdownFrame.Position = UDim2.new(0, 0, 0, 38)
+					dropdownFrame.Size = UDim2.new(1, 0, 1, -38)  -- ← ИЗМЕНЕНО: вычитаем высоту header
 					dropdownFrame.Visible = false
 					dropdownFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 					dropdownFrame.CanvasSize = UDim2.new()
-					dropdownFrame.ScrollBarThickness = 2
+					dropdownFrame.ScrollBarThickness = 4
+					dropdownFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 					dropdownFrame.ScrollBarImageTransparency = 0.5
 					dropdownFrame.BottomImage = ""
 					dropdownFrame.TopImage = ""
 
 					local dropdownFrameUIPadding = Instance.new("UIPadding")
 					dropdownFrameUIPadding.Name = "DropdownFrameUIPadding"
-					dropdownFrameUIPadding.PaddingTop = UDim.new(0, 10)
+					dropdownFrameUIPadding.PaddingTop = UDim.new(0, 0)
 					dropdownFrameUIPadding.PaddingBottom = UDim.new(0, 10)
 					dropdownFrameUIPadding.Parent = dropdownFrame
 
@@ -2733,17 +2734,13 @@ function MacLib:Window(Settings)
 							end
 						end
 
-						local spacing = dropdownFrameUIListLayout.Padding.Offset * (visibleChildrenCount - 1)
+						local spacing = dropdownFrameUIListLayout.Padding.Offset * math.max(visibleChildrenCount - 1, 0)
 						local calculatedHeight = totalHeight + spacing + padding
 						
-						-- Ограничение: максимум 5 элементов (30px на элемент + 5px spacing)
-						local maxVisibleItems = 5
-						local itemHeight = 30 -- высота одного option
-						local itemSpacing = 5 -- spacing между элементами
-						local searchHeight = search.Visible and 35 or 0 -- высота поиска если есть
-						local maxHeight = (itemHeight * maxVisibleItems) + (itemSpacing * (maxVisibleItems - 1)) + padding + searchHeight
+						local maxScrollHeight = 150
+						local headerHeight = 38  -- высота header дропдауна
 						
-						return math.min(calculatedHeight, maxHeight)
+						return math.min(calculatedHeight, maxScrollHeight) + headerHeight
 					end
 
 					local function findOption()
@@ -2853,6 +2850,8 @@ function MacLib:Window(Settings)
 						db = true
 						local defaultDropdownSize = 38
 						local isDropdownOpen = not dropped
+						
+						-- ← УБРАЛИ + 48
 						local targetSize = isDropdownOpen and UDim2.new(1, 0, 0, CalculateDropdownSize()) or UDim2.new(1, 0, 0, defaultDropdownSize)
 
 						local dropTween = Tween(dropdown, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
