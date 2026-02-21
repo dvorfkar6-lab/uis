@@ -1499,7 +1499,7 @@ function MacLib:Window(Settings)
 			elementsScrolling.BottomImage = ""
 			elementsScrolling.CanvasSize = UDim2.new()
 			elementsScrolling.ScrollBarImageTransparency = 0.5
-			elementsScrolling.ScrollBarThickness = 5
+			elementsScrolling.ScrollBarThickness = 1
 			elementsScrolling.TopImage = ""
 			elementsScrolling.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 			elementsScrolling.BackgroundTransparency = 1
@@ -2639,20 +2639,26 @@ function MacLib:Window(Settings)
 					dropdownImage.Size = UDim2.fromOffset(14, 14)
 					dropdownImage.Parent = dropdown
 
-					local dropdownFrame = Instance.new("Frame")
+					local dropdownFrame = Instance.new("ScrollingFrame")
 					dropdownFrame.Name = "DropdownFrame"
 					dropdownFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 					dropdownFrame.BackgroundTransparency = 1
 					dropdownFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					dropdownFrame.BorderSizePixel = 0
 					dropdownFrame.ClipsDescendants = true
-					dropdownFrame.Size = UDim2.fromScale(1, 1)
+					dropdownFrame.Position = UDim2.new(0, 0, 0, 30)
+					dropdownFrame.Size = UDim2.new(1, 0, 1, 0) 
 					dropdownFrame.Visible = false
-					dropdownFrame.AutomaticSize = Enum.AutomaticSize.Y
+					dropdownFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+					dropdownFrame.CanvasSize = UDim2.new()
+					dropdownFrame.ScrollBarThickness = 2
+					dropdownFrame.ScrollBarImageTransparency = 0.5
+					dropdownFrame.BottomImage = ""
+					dropdownFrame.TopImage = ""
 
 					local dropdownFrameUIPadding = Instance.new("UIPadding")
 					dropdownFrameUIPadding.Name = "DropdownFrameUIPadding"
-					dropdownFrameUIPadding.PaddingTop = UDim.new(0, 38)
+					dropdownFrameUIPadding.PaddingTop = UDim.new(0, 10)
 					dropdownFrameUIPadding.PaddingBottom = UDim.new(0, 10)
 					dropdownFrameUIPadding.Parent = dropdownFrame
 
@@ -2728,8 +2734,16 @@ function MacLib:Window(Settings)
 						end
 
 						local spacing = dropdownFrameUIListLayout.Padding.Offset * (visibleChildrenCount - 1)
-
-						return totalHeight + spacing + padding
+						local calculatedHeight = totalHeight + spacing + padding
+						
+						-- Ограничение: максимум 5 элементов (30px на элемент + 5px spacing)
+						local maxVisibleItems = 5
+						local itemHeight = 30 -- высота одного option
+						local itemSpacing = 5 -- spacing между элементами
+						local searchHeight = search.Visible and 35 or 0 -- высота поиска если есть
+						local maxHeight = (itemHeight * maxVisibleItems) + (itemSpacing * (maxVisibleItems - 1)) + padding + searchHeight
+						
+						return math.min(calculatedHeight, maxHeight)
 					end
 
 					local function findOption()
@@ -5862,43 +5876,22 @@ function MacLib:Window(Settings)
 	end
 
 	local keyTimerConnection = nil
+
 	function WindowFunctions:SetKeyTimer(expiresAt)
 		if keyTimerConnection then
 			keyTimerConnection:Disconnect()
 			keyTimerConnection = nil
 		end
-		
+
 		if not expiresAt or expiresAt == "" then
 			keyTimerText.Visible = false
 			return
 		end
-		
-		-- НОВАЯ ФУНКЦИЯ: Парсинг формата MM/DD/YY_HH:MM
-		local function ParseCustomDate(dateString)
-			-- Пример: "02/11/26_21:31"
-			local month, day, year, hour, min = dateString:match("(%d+)/(%d+)/(%d+)_(%d+):(%d+)")
-			if not month then return nil end
-			
-			-- Конвертируем год (26 -> 2026)
-			local fullYear = tonumber(year)
-			if fullYear < 100 then
-				fullYear = 2000 + fullYear
-			end
-			
-			return os.time({
-				year = fullYear,
-				month = tonumber(month),
-				day = tonumber(day),
-				hour = tonumber(hour),
-				min = tonumber(min),
-				sec = 0
-			})
-		end
-		
-		-- СТАРАЯ ФУНКЦИЯ: Парсинг ISO8601 (на случай если API вернёт старый формат)
+
 		local function ParseISO8601(isoString)
 			local year, month, day, hour, min, sec = isoString:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):([%d%.]+)")
 			if not year then return nil end
+
 			return os.time({
 				year = tonumber(year),
 				month = tonumber(month),
@@ -5908,17 +5901,17 @@ function MacLib:Window(Settings)
 				sec = math.floor(tonumber(sec))
 			})
 		end
-		
+
 		local function FormatTimeRemaining(seconds)
 			if seconds <= 0 then
 				return "🔑 Key: Expired"
 			end
-			
+
 			local days = math.floor(seconds / 86400)
 			local hours = math.floor((seconds % 86400) / 3600)
 			local minutes = math.floor((seconds % 3600) / 60)
 			local secs = math.floor(seconds % 60)
-			
+
 			if days > 0 then
 				return string.format("🔑 Key: %dd %dh %dm %ds", days, hours, minutes, secs)
 			elseif hours > 0 then
@@ -5927,29 +5920,27 @@ function MacLib:Window(Settings)
 				return string.format("🔑 Key: %dm %ds", minutes, secs)
 			end
 		end
-		
-		-- Попытка парсинга сначала новым форматом, потом старым
-		local expiryTime = ParseCustomDate(expiresAt) or ParseISO8601(expiresAt)
-		
+
+		local expiryTime = ParseISO8601(expiresAt)
 		if not expiryTime then
 			keyTimerText.Text = "🔑 Key: Invalid date"
 			keyTimerText.Visible = true
 			return
 		end
-		
+
 		keyTimerText.Visible = true
-		
+
 		local function UpdateTimer()
 			local currentTime = os.time()
 			local remaining = expiryTime - currentTime
 			keyTimerText.Text = FormatTimeRemaining(remaining)
-			
+
 			if remaining <= 0 and keyTimerConnection then
 				keyTimerConnection:Disconnect()
 				keyTimerConnection = nil
 			end
 		end
-		
+
 		UpdateTimer()
 		keyTimerConnection = RunService.Heartbeat:Connect(UpdateTimer)
 	end
