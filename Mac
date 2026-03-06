@@ -5888,12 +5888,6 @@ function MacLib:Window(Settings)
 		end
 		
 		-- НОВАЯ ФУНКЦИЯ: Парсинг формата MM/DD/YY_HH:MM
-		local function GetTimezoneOffset()
-			local now = os.time()
-			local utc = os.time(os.date("!*t", now))
-			return now - utc
-		end
-
 		local function ParseCustomDate(dateString)
 			local month, day, year, hour, min = dateString:match("(%d+)/(%d+)/(%d+)_(%d+):(%d+)")
 			if not month then return nil end
@@ -5901,18 +5895,14 @@ function MacLib:Window(Settings)
 			if fullYear < 100 then
 				fullYear = 2000 + fullYear
 			end
-			
-			local parsedTime = os.time({
+			return os.time({
 				year = fullYear,
 				month = tonumber(month),
 				day = tonumber(day),
 				hour = tonumber(hour),
 				min = tonumber(min),
 				sec = 0
-			})
-			
-			-- Автоматически корректируем под UTC
-			return parsedTime - GetTimezoneOffset()
+			}) - (8 * 3600) -- сервер UTC+8, конвертируем в UTC
 		end
 		
 		-- СТАРАЯ ФУНКЦИЯ: Парсинг ISO8601 (на случай если API вернёт старый формат)
