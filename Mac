@@ -5902,7 +5902,7 @@ function MacLib:Window(Settings)
 				hour = tonumber(hour),
 				min = tonumber(min),
 				sec = 0
-			}) - (8 * 3600) -- сервер UTC+8, конвертируем в UTC
+			}) + (8 * 3600) -- сервер UTC+8, конвертируем в UTC
 		end
 		
 		-- СТАРАЯ ФУНКЦИЯ: Парсинг ISO8601 (на случай если API вернёт старый формат)
