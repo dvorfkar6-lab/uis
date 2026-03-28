@@ -12,6 +12,7 @@ local RunService = MacLib.GetService("RunService")
 local HttpService = MacLib.GetService("HttpService")
 local ContentProvider = MacLib.GetService("ContentProvider")
 local UserInputService = MacLib.GetService("UserInputService")
+local function _sd(fn) return function(...) local a={...} task.defer(function() fn(unpack(a)) end) end end
 local Lighting = MacLib.GetService("Lighting")
 local Players = MacLib.GetService("Players")
 
@@ -955,21 +956,21 @@ function MacLib:Window(Settings)
 			toggled = false
 		end
 	end
-	globalSettingsButton.MouseButton1Click:Connect(function()
+	globalSettingsButton.MouseButton1Click:Connect(_sd(function()
 		if not hasGlobalSetting then return end
 		toggle()
-	end)
+	end))
 	globalSettings.MouseEnter:Connect(function()
 		hovering = true
 	end)
 	globalSettings.MouseLeave:Connect(function()
 		hovering = false
 	end)
-	UserInputService.InputEnded:Connect(function(inp)
+	UserInputService.InputEnded:Connect(_sd(function(inp)
 		if inp.UserInputType == Enum.UserInputType.MouseButton1 and toggled and not hovering then
 			toggle()
 		end
-	end)
+	end))
 
 	local BlurTarget = base
 
@@ -1319,7 +1320,7 @@ function MacLib:Window(Settings)
 		local toggled = Settings.Default
 		Toggle(toggled)
 
-		globalSetting.MouseButton1Click:Connect(function()
+		globalSetting.MouseButton1Click:Connect(_sd(function()
 			toggled = not toggled
 			Toggle(toggled)
 
@@ -1329,7 +1330,7 @@ function MacLib:Window(Settings)
 				end
 				MacLib:AutoSave()
 			end)
-		end)
+		end))
 
 		function GlobalSettingFunctions:UpdateName(NewName)
 			settingName.Text = NewName
@@ -1736,7 +1737,7 @@ function MacLib:Window(Settings)
 						ChangeState("Idle")
 					end)
 
-					buttonInteract.MouseButton1Click:Connect(Callback)
+					buttonInteract.MouseButton1Click:Connect(_sd(Callback))
 					function ButtonFunctions:UpdateName(Name)
 						buttonInteract.Text = Name
 					end
@@ -1878,7 +1879,7 @@ function MacLib:Window(Settings)
 						NewState(togglebool, ToggleFunctions.Settings.Callback, false)
 					end
 
-					toggle1.MouseButton1Click:Connect(Toggle)
+					toggle1.MouseButton1Click:Connect(_sd(Toggle))
 
 					function ToggleFunctions:Toggle()
 						Toggle()
@@ -2303,7 +2304,7 @@ function MacLib:Window(Settings)
 						Constraint.MaxSize = Vector2.new(maxWidth, 9e9)
 					end
 
-					checkSize()
+					task.defer(checkSize)
 					InputName:GetPropertyChangedSignal("AbsoluteSize"):Connect(checkSize)
 
 					InputBox.FocusLost:Connect(function()
@@ -2879,7 +2880,7 @@ function MacLib:Window(Settings)
 						dropped = isDropdownOpen
 					end
 
-					interact.MouseButton1Click:Connect(ToggleDropdown)
+					interact.MouseButton1Click:Connect(_sd(ToggleDropdown))
 
 					local function addOption(i, v)
 						local option = Instance.new("TextButton")
@@ -2993,7 +2994,7 @@ function MacLib:Window(Settings)
 
 						local option = OptionObjs[v].Button
 
-						option.MouseButton1Click:Connect(function()
+						option.MouseButton1Click:Connect(_sd(function()
 							local isSelected = table.find(Selected, v) and true or false
 							local newSelected = not isSelected
 
@@ -3021,7 +3022,7 @@ function MacLib:Window(Settings)
 									MacLib:AutoSave()
 								end
 							end)
-						end)
+						end))
 
 						if dropped then
 							dropdown.Size = UDim2.new(1, 0, 0, CalculateDropdownSize())
@@ -4376,10 +4377,10 @@ function MacLib:Window(Settings)
 						transition(false)
 					end
 
-					interact.MouseButton1Click:Connect(colorpickerIn)
+					interact.MouseButton1Click:Connect(_sd(colorpickerIn))
 
-					cancel.MouseButton1Click:Connect(colorpickerOut)
-					confirm.MouseButton1Click:Connect(function()
+					cancel.MouseButton1Click:Connect(_sd(colorpickerOut))
+					confirm.MouseButton1Click:Connect(_sd(function()
 						colorpickerOut()
 						local c = fromHSV(hue, saturation, value)
 						ColorpickerFunctions.Color = Color3.fromRGB(c.r * 255, c.g * 255, c.b * 255)
@@ -4397,7 +4398,7 @@ function MacLib:Window(Settings)
 								MacLib:AutoSave()
 							end)
 						end
-					end)
+					end))
 
 					updateFromSettings()
 
@@ -4820,9 +4821,9 @@ function MacLib:Window(Settings)
 				currentTab.Text = Settings.Name
 			end
 
-			tabSwitcher.MouseButton1Click:Connect(function()
+			tabSwitcher.MouseButton1Click:Connect(_sd(function()
 				SelectCurrentTab()
-			end)
+			end))
 
 			function TabFunctions:Select()
 				SelectCurrentTab()
@@ -5159,12 +5160,12 @@ function MacLib:Window(Settings)
 		style()
 
 		if interactable then
-			interactable.MouseButton1Click:Connect(function()
+			interactable.MouseButton1Click:Connect(_sd(function()
 				NotificationFunctions:Cancel()
 				if Settings.Callback then
 					task.spawn(Settings.Callback)
 				end
-			end)
+			end))
 		end
 
 		local AnimateNotification = task.spawn(function()
@@ -5370,12 +5371,18 @@ function MacLib:Window(Settings)
 		end
 
 		local function dialogOut()
-			if not dialog.Parent then return end
-			dialog.Parent = dialogCanvas
-			canvasOut:Play()
-			scaleOut:Play()
-			canvasOut.Completed:Wait()
-			dialogCanvas:Destroy()
+			local ok = pcall(function()
+				if not dialog.Parent then return end
+				dialog.Parent = dialogCanvas
+				canvasOut:Play()
+				scaleOut:Play()
+				canvasOut.Completed:Once(function()
+					pcall(function() dialogCanvas:Destroy() end)
+				end)
+			end)
+			if not ok then
+				pcall(function() dialogCanvas:Destroy() end)
+			end
 		end
 
 		for _, v in pairs(Settings.Buttons) do
@@ -5432,14 +5439,13 @@ function MacLib:Window(Settings)
 				end
 			end
 
-			button.MouseButton1Click:Connect(function()
+			button.MouseButton1Click:Connect(_sd(function()
 				if dialogCanvas.GroupTransparency ~= 0 then return end
 				if v.Callback then
 					v.Callback()
 				end
-
 				dialogOut()
-			end)
+			end))
 
 			button.MouseEnter:Connect(function()
 				ChangeState("Hover")
@@ -5488,16 +5494,18 @@ function MacLib:Window(Settings)
 		if onUnloadCallback then
 			onUnloadCallback()
 		end
-		if activeMinimizerGui then
-			activeMinimizerGui:Destroy()
-			activeMinimizerGui = nil
-		end
-		if keyTimerConnection then
-			keyTimerConnection:Disconnect()
-			keyTimerConnection = nil
-		end
-		macLib:Destroy()
-		unloaded = true
+		task.defer(function()
+			if activeMinimizerGui then
+				pcall(function() activeMinimizerGui:Destroy() end)
+				activeMinimizerGui = nil
+			end
+			if keyTimerConnection then
+				pcall(function() keyTimerConnection:Disconnect() end)
+				keyTimerConnection = nil
+			end
+			pcall(function() macLib:Destroy() end)
+			unloaded = true
+		end)
 	end
 
 	function WindowFunctions.onUnloaded(callback)
@@ -5516,14 +5524,14 @@ function MacLib:Window(Settings)
 		})
 	end
 
-	UserInputService.InputEnded:Connect(function(inp, gpe)
+	UserInputService.InputEnded:Connect(_sd(function(inp, gpe)
 		if gpe then return end
 		if inp.KeyCode == MenuKeybind then
 			ToggleMenu()
 		end
-	end)
+	end))
 
-	minimize.MouseButton1Click:Connect(ToggleMenu)
+	minimize.MouseButton1Click:Connect(_sd(ToggleMenu))
 	exit.MouseButton1Click:Connect(function()
 		WindowFunctions:Dialog({
 			Title = Settings.Title,
@@ -6068,11 +6076,11 @@ function MacLib:Window(Settings)
 			ChangeState("Default")
 		end)
 
-		button.MouseButton1Click:Connect(function()
+		button.MouseButton1Click:Connect(_sd(function()
 			if not dragging then
 				WindowFunctions:SetState(not WindowFunctions:GetState())
 			end
-		end)
+		end))
 
 		local MinimizerFunctions = {}
 
