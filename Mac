@@ -1200,146 +1200,149 @@ function MacLib:Window(Settings)
 	function WindowFunctions:GlobalSetting(Settings)
 		hasGlobalSetting = true
 		local GlobalSettingFunctions = {}
-		local globalSetting = Instance.new("TextButton")
-		globalSetting.Name = "GlobalSetting"
-		globalSetting.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json")
-		globalSetting.Text = ""
-		globalSetting.TextColor3 = Color3.fromRGB(0, 0, 0)
-		globalSetting.TextSize = 14
-		globalSetting.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		globalSetting.BackgroundTransparency = 1
-		globalSetting.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		globalSetting.BorderSizePixel = 0
-		globalSetting.Size = UDim2.fromOffset(200, 30)
 
-		local globalSettingToggleUIPadding = Instance.new("UIPadding")
-		globalSettingToggleUIPadding.Name = "GlobalSettingToggleUIPadding"
-		globalSettingToggleUIPadding.PaddingLeft = UDim.new(0, 15)
-		globalSettingToggleUIPadding.Parent = globalSetting
+		task.defer(function()
+			local globalSetting = Instance.new("TextButton")
+			globalSetting.Name = "GlobalSetting"
+			globalSetting.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json")
+			globalSetting.Text = ""
+			globalSetting.TextColor3 = Color3.fromRGB(0, 0, 0)
+			globalSetting.TextSize = 14
+			globalSetting.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			globalSetting.BackgroundTransparency = 1
+			globalSetting.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			globalSetting.BorderSizePixel = 0
+			globalSetting.Size = UDim2.fromOffset(200, 30)
 
-		local settingName = Instance.new("TextLabel")
-		settingName.Name = "SettingName"
-		settingName.FontFace = Font.new(assets.interFont)
-		settingName.Text = Settings.Name
-		settingName.RichText = true
-		settingName.TextColor3 = Color3.fromRGB(255, 255, 255)
-		settingName.TextSize = 13
-		settingName.TextTransparency = 0.5
-		settingName.TextTruncate = Enum.TextTruncate.SplitWord
-		settingName.TextXAlignment = Enum.TextXAlignment.Left
-		settingName.TextYAlignment = Enum.TextYAlignment.Top
-		settingName.AnchorPoint = Vector2.new(0, 0.5)
-		settingName.AutomaticSize = Enum.AutomaticSize.Y
-		settingName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		settingName.BackgroundTransparency = 1
-		settingName.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		settingName.BorderSizePixel = 0
-		settingName.Position = UDim2.fromScale(1.3e-07, 0.5)
-		settingName.Size = UDim2.new(1,-40,0,0)
-		settingName.Parent = globalSetting
+			local globalSettingToggleUIPadding = Instance.new("UIPadding")
+			globalSettingToggleUIPadding.Name = "GlobalSettingToggleUIPadding"
+			globalSettingToggleUIPadding.PaddingLeft = UDim.new(0, 15)
+			globalSettingToggleUIPadding.Parent = globalSetting
 
-		local globalSettingToggleUIListLayout = Instance.new("UIListLayout")
-		globalSettingToggleUIListLayout.Name = "GlobalSettingToggleUIListLayout"
-		globalSettingToggleUIListLayout.Padding = UDim.new(0, 10)
-		globalSettingToggleUIListLayout.FillDirection = Enum.FillDirection.Horizontal
-		globalSettingToggleUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		globalSettingToggleUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-		globalSettingToggleUIListLayout.Parent = globalSetting
+			local settingName = Instance.new("TextLabel")
+			settingName.Name = "SettingName"
+			settingName.FontFace = Font.new(assets.interFont)
+			settingName.Text = Settings.Name
+			settingName.RichText = true
+			settingName.TextColor3 = Color3.fromRGB(255, 255, 255)
+			settingName.TextSize = 13
+			settingName.TextTransparency = 0.5
+			settingName.TextTruncate = Enum.TextTruncate.SplitWord
+			settingName.TextXAlignment = Enum.TextXAlignment.Left
+			settingName.TextYAlignment = Enum.TextYAlignment.Top
+			settingName.AnchorPoint = Vector2.new(0, 0.5)
+			settingName.AutomaticSize = Enum.AutomaticSize.Y
+			settingName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			settingName.BackgroundTransparency = 1
+			settingName.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			settingName.BorderSizePixel = 0
+			settingName.Position = UDim2.fromScale(1.3e-07, 0.5)
+			settingName.Size = UDim2.new(1,-40,0,0)
+			settingName.Parent = globalSetting
 
-		local checkmark = Instance.new("TextLabel")
-		checkmark.Name = "Checkmark"
-		checkmark.FontFace = Font.new(
-			assets.interFont,
-			Enum.FontWeight.Medium,
-			Enum.FontStyle.Normal
-		)
-		checkmark.Text = "✓"
-		checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
-		checkmark.TextSize = 13
-		checkmark.TextTransparency = 1
-		checkmark.TextXAlignment = Enum.TextXAlignment.Left
-		checkmark.TextYAlignment = Enum.TextYAlignment.Top
-		checkmark.AnchorPoint = Vector2.new(0, 0.5)
-		checkmark.AutomaticSize = Enum.AutomaticSize.Y
-		checkmark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		checkmark.BackgroundTransparency = 1
-		checkmark.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		checkmark.BorderSizePixel = 0
-		checkmark.LayoutOrder = -1
-		checkmark.Position = UDim2.fromScale(1.3e-07, 0.5)
-		checkmark.Size = UDim2.fromOffset(-10, 0)
-		checkmark.Parent = globalSetting
+			local globalSettingToggleUIListLayout = Instance.new("UIListLayout")
+			globalSettingToggleUIListLayout.Name = "GlobalSettingToggleUIListLayout"
+			globalSettingToggleUIListLayout.Padding = UDim.new(0, 10)
+			globalSettingToggleUIListLayout.FillDirection = Enum.FillDirection.Horizontal
+			globalSettingToggleUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			globalSettingToggleUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+			globalSettingToggleUIListLayout.Parent = globalSetting
 
-		globalSetting.Parent = globalSettings
+			local checkmark = Instance.new("TextLabel")
+			checkmark.Name = "Checkmark"
+			checkmark.FontFace = Font.new(
+				assets.interFont,
+				Enum.FontWeight.Medium,
+				Enum.FontStyle.Normal
+			)
+			checkmark.Text = "✓"
+			checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
+			checkmark.TextSize = 13
+			checkmark.TextTransparency = 1
+			checkmark.TextXAlignment = Enum.TextXAlignment.Left
+			checkmark.TextYAlignment = Enum.TextYAlignment.Top
+			checkmark.AnchorPoint = Vector2.new(0, 0.5)
+			checkmark.AutomaticSize = Enum.AutomaticSize.Y
+			checkmark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			checkmark.BackgroundTransparency = 1
+			checkmark.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			checkmark.BorderSizePixel = 0
+			checkmark.LayoutOrder = -1
+			checkmark.Position = UDim2.fromScale(1.3e-07, 0.5)
+			checkmark.Size = UDim2.fromOffset(-10, 0)
+			checkmark.Parent = globalSetting
 
-		local tweensettings = {
-			duration = 0.2,
-			easingStyle = Enum.EasingStyle.Quint,
-			transparencyIn = 0.2,
-			transparencyOut = 0.5,
-			checkSizeIncrease = 12,
-			checkSizeDecrease = -globalSettingToggleUIListLayout.Padding.Offset,
-			waitTime = 1
-		}
+			globalSetting.Parent = globalSettings
 
-		local tweens = {
-			checkIn = Tween(checkmark, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle), {
-				Size = UDim2.new(checkmark.Size.X.Scale, tweensettings.checkSizeIncrease, checkmark.Size.Y.Scale, checkmark.Size.Y.Offset)
-			}),
-			checkOut = Tween(checkmark, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
-				Size = UDim2.new(checkmark.Size.X.Scale, tweensettings.checkSizeDecrease, checkmark.Size.Y.Scale, checkmark.Size.Y.Offset)
-			}),
-			nameIn = Tween(settingName, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
-				TextTransparency = tweensettings.transparencyIn
-			}),
-			nameOut = Tween(settingName, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
-				TextTransparency = tweensettings.transparencyOut
-			})
-		}
+			local tweensettings = {
+				duration = 0.2,
+				easingStyle = Enum.EasingStyle.Quint,
+				transparencyIn = 0.2,
+				transparencyOut = 0.5,
+				checkSizeIncrease = 12,
+				checkSizeDecrease = -globalSettingToggleUIListLayout.Padding.Offset,
+				waitTime = 1
+			}
 
-		local function Toggle(State)
-			if not State then
-				tweens.checkOut:Play()
-				tweens.nameOut:Play()
-				checkmark:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-					if checkmark.AbsoluteSize.X <= 0 then
-						checkmark.TextTransparency = 1
-					end
-				end)
-			else
-				tweens.checkIn:Play()
-				tweens.nameIn:Play()
-				checkmark:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-					if checkmark.AbsoluteSize.X > 0 then
-						checkmark.TextTransparency = 0
-					end
-				end)
+			local tweens = {
+				checkIn = Tween(checkmark, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle), {
+					Size = UDim2.new(checkmark.Size.X.Scale, tweensettings.checkSizeIncrease, checkmark.Size.Y.Scale, checkmark.Size.Y.Offset)
+				}),
+				checkOut = Tween(checkmark, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
+					Size = UDim2.new(checkmark.Size.X.Scale, tweensettings.checkSizeDecrease, checkmark.Size.Y.Scale, checkmark.Size.Y.Offset)
+				}),
+				nameIn = Tween(settingName, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
+					TextTransparency = tweensettings.transparencyIn
+				}),
+				nameOut = Tween(settingName, TweenInfo.new(tweensettings.duration, tweensettings.easingStyle),{
+					TextTransparency = tweensettings.transparencyOut
+				})
+			}
+
+			local function Toggle(State)
+				if not State then
+					tweens.checkOut:Play()
+					tweens.nameOut:Play()
+					checkmark:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+						if checkmark.AbsoluteSize.X <= 0 then
+							checkmark.TextTransparency = 1
+						end
+					end)
+				else
+					tweens.checkIn:Play()
+					tweens.nameIn:Play()
+					checkmark:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+						if checkmark.AbsoluteSize.X > 0 then
+							checkmark.TextTransparency = 0
+						end
+					end)
+				end
 			end
-		end
 
-		local toggled = Settings.Default
-		Toggle(toggled)
-
-		globalSetting.MouseButton1Click:Connect(_sd(function()
-			toggled = not toggled
+			local toggled = Settings.Default
 			Toggle(toggled)
 
-			task.spawn(function()
-				if Settings.Callback then
-					Settings.Callback(toggled)
-				end
-				MacLib:AutoSave()
-			end)
-		end))
+			globalSetting.MouseButton1Click:Connect(_sd(function()
+				toggled = not toggled
+				Toggle(toggled)
 
-		function GlobalSettingFunctions:UpdateName(NewName)
-			settingName.Text = NewName
-		end
+				task.spawn(function()
+					if Settings.Callback then
+						Settings.Callback(toggled)
+					end
+					MacLib:AutoSave()
+				end)
+			end))
 
-		function GlobalSettingFunctions:UpdateState(NewState)
-			Toggle(NewState)
-			toggled = NewState
-		end
+			function GlobalSettingFunctions:UpdateName(NewName)
+				settingName.Text = NewName
+			end
+
+			function GlobalSettingFunctions:UpdateState(NewState)
+				Toggle(NewState)
+				toggled = NewState
+			end
+		end)
 
 		return GlobalSettingFunctions
 	end
@@ -4999,7 +5002,8 @@ function MacLib:Window(Settings)
 	function WindowFunctions:Notify(Settings)
 		local NotificationFunctions = {}
 
-		local notification = Instance.new("Frame")
+		task.defer(function()
+			local notification = Instance.new("Frame")
 		notification.Name = "Notification"
 		notification.AnchorPoint = Vector2.new(0.5, 0.5)
 		notification.AutomaticSize = Enum.AutomaticSize.Y
@@ -5204,6 +5208,7 @@ function MacLib:Window(Settings)
 			out.Completed:Wait()
 			notification:Destroy()
 		end
+		end)
 
 		return NotificationFunctions
 	end
@@ -5472,16 +5477,17 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetNotificationsState(State)
-		notifications.Visible = State
+		task.defer(function() pcall(function() notifications.Visible = State end) end)
 	end
 
 	function WindowFunctions:GetNotificationsState(State)
-		return notifications.Visible
+		local ok, val = pcall(function() return notifications.Visible end)
+		return ok and val or true
 	end
 
 	function WindowFunctions:SetState(State)
 		windowState = State
-		base.Visible = State
+		task.defer(function() pcall(function() base.Visible = State end) end)
 	end
 
 	function WindowFunctions:GetState()
@@ -5556,7 +5562,7 @@ function MacLib:Window(Settings)
 
 	function WindowFunctions:SetAcrylicBlurState(State)
 		acrylicBlur = State
-		base.BackgroundTransparency = State and 0.05 or 0.1
+		task.defer(function() pcall(function() base.BackgroundTransparency = State and 0.05 or 0.1 end) end)
 	end
 
 	function WindowFunctions:GetAcrylicBlurState()
@@ -5585,17 +5591,19 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetSize(Size)
-		base.Size = Size
+		task.defer(function() pcall(function() base.Size = Size end) end)
 	end
 	function WindowFunctions:GetSize(Size)
-		return base.Size
+		local ok, val = pcall(function() return base.Size end)
+		return ok and val or UDim2.fromOffset(865, 650)
 	end
 
 	function WindowFunctions:SetScale(Scale)
-		baseUIScale.Scale = Scale
+		task.defer(function() pcall(function() baseUIScale.Scale = Scale end) end)
 	end
 	function WindowFunctions:GetScale()
-		return baseUIScale.Scale
+		local ok, val = pcall(function() return baseUIScale.Scale end)
+		return ok and val or 1
 	end
 
 	local ClassParser = {
