@@ -1600,6 +1600,24 @@ function MacLib:Window(Settings)
 
 			right.Parent = sidesContainer
 
+			local bottom = Instance.new("Frame")
+			bottom.Name = "Bottom"
+			bottom.AutomaticSize = Enum.AutomaticSize.Y
+			bottom.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			bottom.BackgroundTransparency = 1
+			bottom.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			bottom.BorderSizePixel = 0
+			bottom.LayoutOrder = 2
+			bottom.Size = UDim2.new(1, 0, 0, 0)
+
+			local bottomUIListLayout = Instance.new("UIListLayout")
+			bottomUIListLayout.Name = "BottomUIListLayout"
+			bottomUIListLayout.Padding = UDim.new(0, 15)
+			bottomUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			bottomUIListLayout.Parent = bottom
+
+			bottom.Parent = elementsScrolling
+
 			elementsScrolling.Parent = elements1
 
 			function TabFunctions:Section(Settings)
@@ -1622,8 +1640,10 @@ function MacLib:Window(Settings)
 					section.Parent = right
 				elseif Settings.Side == "Center" then
 					section.Parent = center
+				elseif Settings.Side == "Bottom" then
+					section.Parent = bottom
 				else
-					section.Parent = left -- По умолчанию левая сторона
+					section.Parent = left
 				end
 
 				local sectionUICorner = Instance.new("UICorner")
@@ -6089,7 +6109,7 @@ function MacLib:Window(Settings)
 				WindowFunctions:SetState(not WindowFunctions:GetState())
 			end
 		end))
-
+ц
 		local MinimizerFunctions = {}
 
 		function MinimizerFunctions:SetPosition(Position)
