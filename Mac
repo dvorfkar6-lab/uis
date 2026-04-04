@@ -5808,10 +5808,8 @@ function MacLib:Window(Settings)
 		pcall(function()
 			local baseFolder = GetBaseGameFolder()
 			local modePath = baseFolder .. "/config_mode.txt"
-			warn("[MacLib] LoadConfigMode path: " .. modePath .. " exists: " .. tostring(isfile(modePath)))
 			if isfile(modePath) then
 				local mode = readfile(modePath)
-				warn("[MacLib] LoadConfigMode read: '" .. tostring(mode) .. "'")
 				if mode == "perUser" then
 					MacLib.ConfigMode = "perUser"
 				else
@@ -5825,9 +5823,7 @@ function MacLib:Window(Settings)
 		if isStudio or not writefile then return end
 		pcall(function()
 			local baseFolder = GetBaseGameFolder()
-			local modePath = baseFolder .. "/config_mode.txt"
-			warn("[MacLib] SaveConfigMode path: " .. modePath .. " mode: " .. MacLib.ConfigMode)
-			writefile(modePath, MacLib.ConfigMode)
+			writefile(baseFolder .. "/config_mode.txt", MacLib.ConfigMode)
 		end)
 	end
 
