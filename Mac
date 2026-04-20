@@ -2111,6 +2111,16 @@ function MacLib:Window(Settings)
 
 						finalValue = posXScale * (SliderFunctions.Settings.Maximum - SliderFunctions.Settings.Minimum) + Settings.Minimum
 
+						-- Apply Precision to the actual value, not just display text.
+						-- Without this, floating-point accumulation from posXScale leaves
+						-- values like 29.999999999996 instead of 30 even though the text
+						-- shows "30", and the Callback receives the raw float.
+						local precision = SliderFunctions.Settings.Precision
+						if type(precision) == "number" then
+							local mult = 10 ^ precision
+							finalValue = math.floor(finalValue * mult + 0.5) / mult
+						end
+
 						sliderValue.Text = (Settings.Prefix or "") .. ValueDisplayMethod(finalValue, SliderFunctions.Settings.Precision) .. (Settings.Suffix or "")
 
 						SliderFunctions.Value = finalValue
