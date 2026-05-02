@@ -3076,7 +3076,39 @@ function MacLib:Window(Settings)
 						dropdown.Visible = State
 					end
 					function DropdownFunctions:UpdateSelection(newSelection, skipAutoSave)
-						if not newSelection then return end
+						if newSelection == nil then return end
+
+						-- Pending value mechanism:
+						-- Если запрошенное значение не в текущих OptionObjs (например Options
+						-- ещё не пересозданы зависимым dropdown'ом при LoadConfig) — сохраняем
+						-- его как pending и применяем в InsertOptions когда options появятся.
+						local function isAnyValid()
+							if type(newSelection) == "string" then
+								return OptionObjs[newSelection] ~= nil
+							elseif type(newSelection) == "number" then
+								for _, data in pairs(OptionObjs) do
+									if data.Index == newSelection then return true end
+								end
+								return false
+							elseif type(newSelection) == "table" then
+								for option, _ in pairs(OptionObjs) do
+									if table.find(newSelection, option) then return true end
+								end
+								return false
+							end
+							return false
+						end
+
+						if not isAnyValid() then
+							-- Полностью невалидное значение — сохраняем для будущей попытки
+							DropdownFunctions._PendingValue = newSelection
+							DropdownFunctions._PendingSkipAutoSave = skipAutoSave
+							return
+						end
+
+						-- Pending очищаем — применяем актуальное
+						DropdownFunctions._PendingValue = nil
+						DropdownFunctions._PendingSkipAutoSave = nil
 
 						local selectedOptions = {}
 						local newSelected = {}
@@ -3132,6 +3164,29 @@ function MacLib:Window(Settings)
 						DropdownFunctions.Settings.Options = newOptions
 						for i, v in pairs(newOptions) do
 							addOption(i, v)
+						end
+
+						-- Восстановление визуала после пересоздания options:
+						-- 1) Если есть pending value (LoadConfig пытался загрузить пока options ещё не было)
+						--    → применяем ПОЛНОСТЬЮ через UpdateSelection (с callback'ом — это нужно чтобы
+						--    application state в скрипте синхронизировался с загруженным значением).
+						-- 2) Иначе — переприменяем текущий DropdownFunctions.Value (он переживает ClearOptions),
+						--    чтобы dropdownName.Text и галочки восстановились. Здесь callback НЕ вызываем —
+						--    Value не менялся, скрипт об этом не знает, и лишний callback будет
+						--    нежелательным побочным эффектом для паттернов вроде ClearOptions+InsertOptions+UpdateSelection.
+						if DropdownFunctions._PendingValue ~= nil then
+							local pv  = DropdownFunctions._PendingValue
+							local sas = DropdownFunctions._PendingSkipAutoSave
+							DropdownFunctions._PendingValue = nil
+							DropdownFunctions._PendingSkipAutoSave = nil
+							DropdownFunctions:UpdateSelection(pv, sas)
+						elseif DropdownFunctions.Value ~= nil then
+							-- Visual-only restore: временно убираем callback чтобы UpdateSelection
+							-- не вызвал его лишний раз
+							local savedCallback = DropdownFunctions.Settings.Callback
+							DropdownFunctions.Settings.Callback = nil
+							DropdownFunctions:UpdateSelection(DropdownFunctions.Value, true)
+							DropdownFunctions.Settings.Callback = savedCallback
 						end
 					end
 					function DropdownFunctions:ClearOptions()
@@ -6015,13 +6070,18 @@ function MacLib:Window(Settings)
 		local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
 		if not success then return false, "Unable to decode JSON data." end
 
-		for _, option in next, decoded.objects do
-			if ClassParser[option.type] then
-				task.spawn(function()
+		task.spawn(function()
+			-- Sequential load в одной короутине: важен детерминированный порядок
+			-- для зависимых элементов (например Mode→Map dropdown). Обёртка в
+			-- task.spawn нужна для обхода capability-ограничений в некоторых
+			-- executor'ах (раньше каждый Load был в своём task.spawn — это давало
+			-- race condition).
+			for _, option in next, decoded.objects do
+				if ClassParser[option.type] then
 					ClassParser[option.type].Load(option.flag, option)
-				end)
+				end
 			end
-		end
+		end)
 
 		return true
 	end
