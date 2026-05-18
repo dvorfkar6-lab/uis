@@ -13,7 +13,7 @@ local RunService = MacLib.GetService("RunService")
 local HttpService = MacLib.GetService("HttpService")
 local ContentProvider = MacLib.GetService("ContentProvider")
 local UserInputService = MacLib.GetService("UserInputService")
-local function _sd(fn) return function(...) local a={...} task.defer(function() fn(unpack(a)) end) end end
+local function _sd(fn) return function(...) local a={...} task.spawn(function() fn(unpack(a)) end) end end
 local Lighting = MacLib.GetService("Lighting")
 local Players = MacLib.GetService("Players")
 
@@ -5605,7 +5605,7 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetNotificationsState(State)
-		task.defer(function() pcall(function() notifications.Visible = State end) end)
+		task.spawn(function() pcall(function() notifications.Visible = State end) end)
 	end
 
 	function WindowFunctions:GetNotificationsState(State)
@@ -5615,7 +5615,7 @@ function MacLib:Window(Settings)
 
 	function WindowFunctions:SetState(State)
 		windowState = State
-		task.defer(function() pcall(function() base.Visible = State end) end)
+		task.spawn(function() pcall(function() base.Visible = State end) end)
 	end
 
 	function WindowFunctions:GetState()
@@ -5690,7 +5690,7 @@ function MacLib:Window(Settings)
 
 	function WindowFunctions:SetAcrylicBlurState(State)
 		acrylicBlur = State
-		task.defer(function() pcall(function() base.BackgroundTransparency = State and 0.05 or 0.1 end) end)
+		task.spawn(function() pcall(function() base.BackgroundTransparency = State and 0.05 or 0.1 end) end)
 	end
 
 	function WindowFunctions:GetAcrylicBlurState()
@@ -5719,7 +5719,7 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetSize(Size)
-		task.defer(function() pcall(function() base.Size = Size end) end)
+		task.spawn(function() pcall(function() base.Size = Size end) end)
 	end
 	function WindowFunctions:GetSize(Size)
 		local ok, val = pcall(function() return base.Size end)
@@ -5727,7 +5727,7 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetScale(Scale)
-		task.defer(function() pcall(function() baseUIScale.Scale = Scale end) end)
+		task.spawn(function() pcall(function() baseUIScale.Scale = Scale end) end)
 	end
 	function WindowFunctions:GetScale()
 		local ok, val = pcall(function() return baseUIScale.Scale end)
