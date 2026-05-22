@@ -57,9 +57,21 @@ local function GetGui()
 	newGui.DisplayOrder = 2147483647
 	newGui.Name = "capalot.cc"
 
-	local parent = gethui() 
+	-- MacSploit race condition: при первом запуске у потока нет capability Plugin
+	-- для CoreGui, пытаемся через gethui с retry.
+	local function tryParent()
+		local parent
+		local ok = pcall(function() parent = gethui() end)
+		if not ok or not parent then return false end
+		local ok2 = pcall(function() newGui.Parent = parent end)
+		return ok2
+	end
 
-	newGui.Parent = parent
+	for _ = 1, 10 do
+		if tryParent() then break end
+		task.wait(0.1)
+	end
+
 	return newGui
 end
 
