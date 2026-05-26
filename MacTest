@@ -15,7 +15,6 @@ local MacLib = {
 		return svc
 	end
 }
-
 --// Services
 local TweenService = MacLib.GetService("TweenService")
 local RunService = MacLib.GetService("RunService")
