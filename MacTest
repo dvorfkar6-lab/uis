@@ -3,7 +3,16 @@ local MacLib = {
 	Folder = "ApelHub", 
 	ConfigMode = "shared", -- "shared" = one config for all accounts, "perUser" = separate config per account
 	GetService = function(service)
-		return cloneref and cloneref(game:GetService(service)) or game:GetService(service)
+		local svc
+		local ok = pcall(function() svc = game:GetService(service) end)
+		if not ok or not svc then
+			pcall(function() svc = game:FindService(service) end)
+		end
+		if svc and cloneref then
+			local ok2, cloned = pcall(cloneref, svc)
+			if ok2 and cloned then return cloned end
+		end
+		return svc
 	end
 }
 
@@ -58,19 +67,25 @@ local function GetGui()
 	newGui.Name = "capalot.cc"
 
 	-- Список кандидатов для парента в порядке предпочтения.
-	-- Каждый кандидат — функция, возвращающая Instance или nil.
-	local CoreGui = MacLib.GetService("CoreGui")
+	-- Каждый кандидат — {name, fn}. Все вызовы в pcall, чтобы любая защищённая
+	-- операция экзекьютора не уронила скрипт.
+	local function safeCoreGui()
+		local cg
+		pcall(function() cg = game:GetService("CoreGui") end)
+		if not cg then pcall(function() cg = game:FindService("CoreGui") end) end
+		return cg
+	end
 	local candidates = {
-		function() return (typeof(gethui) == "function") and gethui() or nil end,
-		function() return (typeof(get_hidden_gui) == "function") and get_hidden_gui() or nil end,
-		function() return CoreGui end,
-		function()
+		{"gethui",         function() return (typeof(gethui) == "function") and gethui() or nil end},
+		{"get_hidden_gui", function() return (typeof(get_hidden_gui) == "function") and get_hidden_gui() or nil end},
+		{"CoreGui",        function() return safeCoreGui() end},
+		{"PlayerGui",      function()
 			local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
 			if not pg then
 				pcall(function() pg = LocalPlayer:WaitForChild("PlayerGui", 5) end)
 			end
 			return pg
-		end,
+		end},
 	}
 
 	-- protect_gui-хелпер (synapse/wave/etc.) — пробуем заранее, не падая.
@@ -92,10 +107,13 @@ local function GetGui()
 	end
 
 	local attached = false
-	for _ = 1, 30 do -- до ~3 секунд
-		for _, getParent in ipairs(candidates) do
-			if tryParent(getParent) then
+	local attachedVia
+	for attempt = 1, 30 do -- до ~3 секунд
+		for _, cand in ipairs(candidates) do
+			if tryParent(cand[2]) then
 				attached = true
+				attachedVia = cand[1]
+				print(("[MacLib] GUI parented via %s on attempt %d (parent=%s)"):format(cand[1], attempt, tostring(newGui.Parent)))
 				break
 			end
 		end
@@ -103,11 +121,18 @@ local function GetGui()
 		task.wait(0.1)
 	end
 
+	if not attached then
+		warn("[MacLib] GUI failed to parent after all attempts. gethui="..tostring(gethui)..", get_hidden_gui="..tostring(get_hidden_gui))
+	end
+
 	-- Если что-то отпарентит ScreenGui позже (античит/чужой скрипт) — переподцепляем.
 	newGui:GetPropertyChangedSignal("Parent"):Connect(function()
 		if newGui.Parent == nil and not unloaded then
-			for _, getParent in ipairs(candidates) do
-				if tryParent(getParent) then break end
+			for _, cand in ipairs(candidates) do
+				if tryParent(cand[2]) then
+					print(("[MacLib] GUI re-parented via %s (was detached)"):format(cand[1]))
+					break
+				end
 			end
 		end
 	end)
