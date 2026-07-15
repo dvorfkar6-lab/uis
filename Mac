@@ -1698,54 +1698,293 @@ function MacLib:Window(Settings)
 
 			function TabFunctions:Section(Settings)
 				local SectionFunctions = {}
-				local section = Instance.new("Frame")
-				section.Name = "Section"
-				section.AutomaticSize = Enum.AutomaticSize.Y
-				section.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-				section.BackgroundTransparency = 0.98
-				section.BorderColor3 = Color3.fromRGB(0, 0, 0)
-				section.BorderSizePixel = 0
-				section.Position = UDim2.fromScale(0, 6.78e-08)
-				section.Size = UDim2.fromScale(1, 0)
-				section.ClipsDescendants = true
+				SectionFunctions.Settings = Settings or {}
+				local sectionTitle = SectionFunctions.Settings.Name or SectionFunctions.Settings.Title
+				local section   -- фрейм-контент, куда парентятся ВСЕ виджеты (задаётся ниже в обеих ветках)
 
-				-- Выбор родительского контейнера в зависимости от стороны
-				if Settings.Side == "Left" then
-					section.Parent = left
-				elseif Settings.Side == "Right" then
-					section.Parent = right
-				elseif Settings.Side == "Center" then
-					section.Parent = center
-				elseif Settings.Side == "Bottom" then
-					section.Parent = bottom
+				if not SectionFunctions.Settings.Collapsible then
+					-- ПЛОСКАЯ секция (ПО УМОЛЧАНИЮ): без сворачивания, как было. Collapsible = true чтобы включить.
+					section = Instance.new("Frame")
+					section.Name = "Section"
+					section.AutomaticSize = Enum.AutomaticSize.Y
+					section.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					section.BackgroundTransparency = 0.98
+					section.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					section.BorderSizePixel = 0
+					section.Position = UDim2.fromScale(0, 6.78e-08)
+					section.Size = UDim2.fromScale(1, 0)
+					section.ClipsDescendants = true
+
+					if Settings.Side == "Left" then
+						section.Parent = left
+					elseif Settings.Side == "Right" then
+						section.Parent = right
+					elseif Settings.Side == "Center" then
+						section.Parent = center
+					elseif Settings.Side == "Bottom" then
+						section.Parent = bottom
+					else
+						section.Parent = left
+					end
+
+					local sectionUICorner = Instance.new("UICorner")
+					sectionUICorner.Name = "SectionUICorner"
+					sectionUICorner.Parent = section
+
+					local sectionUIStroke = Instance.new("UIStroke")
+					sectionUIStroke.Name = "SectionUIStroke"
+					sectionUIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					sectionUIStroke.Color = Color3.fromRGB(255, 255, 255)
+					sectionUIStroke.Transparency = 0.95
+					sectionUIStroke.Parent = section
+
+					local sectionUIListLayout = Instance.new("UIListLayout")
+					sectionUIListLayout.Name = "SectionUIListLayout"
+					sectionUIListLayout.Padding = UDim.new(0, 10)
+					sectionUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+					sectionUIListLayout.Parent = section
+
+					local sectionUIPadding = Instance.new("UIPadding")
+					sectionUIPadding.Name = "SectionUIPadding"
+					sectionUIPadding.PaddingBottom = UDim.new(0, 15)
+					sectionUIPadding.PaddingLeft = UDim.new(0, 14)
+					sectionUIPadding.PaddingRight = UDim.new(0, 12)
+					sectionUIPadding.PaddingTop = UDim.new(0, 16)
+					sectionUIPadding.Parent = section
 				else
-					section.Parent = left
+					-- СВОРАЧИВАЕМАЯ секция (Collapsible = true): кликабельный хедер + стрелка + анимация.
+					-- Стартует РАЗВЁРНУТОЙ; Collapsed = true чтобы стартовать свёрнутой.
+					local sectionOuter = Instance.new("Frame")
+					sectionOuter.Name = "Section"
+					sectionOuter.AutomaticSize = Enum.AutomaticSize.None
+					sectionOuter.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					sectionOuter.BackgroundTransparency = 0.98
+					sectionOuter.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					sectionOuter.BorderSizePixel = 0
+					sectionOuter.Position = UDim2.fromScale(0, 6.78e-08)
+					sectionOuter.Size = UDim2.fromScale(1, 0)
+					sectionOuter.ClipsDescendants = true
+
+					if Settings.Side == "Left" then
+						sectionOuter.Parent = left
+					elseif Settings.Side == "Right" then
+						sectionOuter.Parent = right
+					elseif Settings.Side == "Center" then
+						sectionOuter.Parent = center
+					elseif Settings.Side == "Bottom" then
+						sectionOuter.Parent = bottom
+					else
+						sectionOuter.Parent = left
+					end
+
+					local sectionUICorner = Instance.new("UICorner")
+					sectionUICorner.Name = "SectionUICorner"
+					sectionUICorner.Parent = sectionOuter
+
+					local sectionUIStroke = Instance.new("UIStroke")
+					sectionUIStroke.Name = "SectionUIStroke"
+					sectionUIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					sectionUIStroke.Color = Color3.fromRGB(255, 255, 255)
+					sectionUIStroke.Transparency = 0.95
+					sectionUIStroke.Parent = sectionOuter
+
+					local sectionUIListLayout = Instance.new("UIListLayout")
+					sectionUIListLayout.Name = "SectionUIListLayout"
+					sectionUIListLayout.Padding = UDim.new(0, 10)
+					sectionUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+					sectionUIListLayout.Parent = sectionOuter
+
+					local sectionUIPadding = Instance.new("UIPadding")
+					sectionUIPadding.Name = "SectionUIPadding"
+					sectionUIPadding.PaddingBottom = UDim.new(0, 15)
+					sectionUIPadding.PaddingLeft = UDim.new(0, 14)
+					sectionUIPadding.PaddingRight = UDim.new(0, 12)
+					sectionUIPadding.PaddingTop = UDim.new(0, 16)
+					sectionUIPadding.Parent = sectionOuter
+
+					local sectionHeader = Instance.new("TextButton")
+					sectionHeader.Name = "SectionHeader"
+					sectionHeader.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json")
+					sectionHeader.Text = ""
+					sectionHeader.AutoButtonColor = false
+					sectionHeader.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					sectionHeader.BackgroundTransparency = 1
+					sectionHeader.BorderSizePixel = 0
+					sectionHeader.Size = UDim2.new(1, 0, 0, 18)
+					sectionHeader.LayoutOrder = -1
+					sectionHeader.Parent = sectionOuter
+
+					local sectionHeaderTitle = Instance.new("TextLabel")
+					sectionHeaderTitle.Name = "SectionHeaderTitle"
+					sectionHeaderTitle.FontFace = Font.new(assets.interFont, Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+					sectionHeaderTitle.Text = sectionTitle or ""
+					sectionHeaderTitle.RichText = true
+					sectionHeaderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+					sectionHeaderTitle.TextSize = 14
+					sectionHeaderTitle.TextTransparency = 0.35
+					sectionHeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+					sectionHeaderTitle.BackgroundTransparency = 1
+					sectionHeaderTitle.BorderSizePixel = 0
+					sectionHeaderTitle.Size = UDim2.new(1, -24, 1, 0)
+					sectionHeaderTitle.Parent = sectionHeader
+
+					local sectionArrow = Instance.new("TextLabel")
+					sectionArrow.Name = "SectionArrow"
+					sectionArrow.FontFace = Font.new(assets.interFont, Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+					sectionArrow.Text = ">"
+					sectionArrow.TextColor3 = Color3.fromRGB(255, 255, 255)
+					sectionArrow.TextSize = 16
+					sectionArrow.TextTransparency = 0.35
+					sectionArrow.TextXAlignment = Enum.TextXAlignment.Right
+					sectionArrow.BackgroundTransparency = 1
+					sectionArrow.BorderSizePixel = 0
+					sectionArrow.Position = UDim2.new(1, -16, 0, 0)
+					sectionArrow.Size = UDim2.fromOffset(16, 18)
+					sectionArrow.Parent = sectionHeader
+
+					local sectionContentHolder = Instance.new("Frame")
+					sectionContentHolder.Name = "SectionContentHolder"
+					sectionContentHolder.BackgroundTransparency = 1
+					sectionContentHolder.BorderSizePixel = 0
+					sectionContentHolder.ClipsDescendants = true
+					sectionContentHolder.Position = UDim2.fromOffset(1, 0)
+					sectionContentHolder.Size = UDim2.new(1, -2, 0, 0)
+					sectionContentHolder.LayoutOrder = 0
+					sectionContentHolder.Parent = sectionOuter
+
+					section = Instance.new("Frame")
+					section.Name = "SectionContent"
+					section.AutomaticSize = Enum.AutomaticSize.Y
+					section.BackgroundTransparency = 1
+					section.BorderSizePixel = 0
+					section.Position = UDim2.fromOffset(2, 0)
+					section.Size = UDim2.new(1, -4, 0, 0)
+					section.LayoutOrder = 0
+					section.Parent = sectionContentHolder
+
+					local sectionContentLayout = Instance.new("UIListLayout")
+					sectionContentLayout.Name = "SectionContentLayout"
+					sectionContentLayout.Padding = UDim.new(0, 10)
+					sectionContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+					sectionContentLayout.Parent = section
+
+					local sectionContentPadding = Instance.new("UIPadding")
+					sectionContentPadding.Name = "SectionContentPadding"
+					sectionContentPadding.PaddingTop = UDim.new(0, 4)
+					sectionContentPadding.Parent = section
+
+					local collapsed = false
+					local collapseTween
+					local sectionAnimationInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+					local function guiScale()
+						local s = baseUIScale and baseUIScale.Scale
+						if type(s) ~= "number" or s <= 0 then return 1 end
+						return s
+					end
+					local function getExpandedHeight()
+						return (sectionContentLayout.AbsoluteContentSize.Y / guiScale()) + 4
+					end
+					local function getSectionHeight(contentHeight)
+						local spacing = contentHeight > 0 and sectionUIListLayout.Padding.Offset or 0
+						return sectionUIPadding.PaddingTop.Offset
+							+ sectionHeader.Size.Y.Offset
+							+ spacing
+							+ contentHeight
+							+ sectionUIPadding.PaddingBottom.Offset
+					end
+					local function syncSectionContentHeight(animated)
+						if collapseTween then collapseTween:Cancel(); collapseTween = nil end
+						local targetHeight = collapsed and 0 or getExpandedHeight()
+						local targetSectionHeight = getSectionHeight(targetHeight)
+						if not animated then
+							section.Visible = not collapsed
+							sectionContentHolder.Size = UDim2.new(1, -2, 0, targetHeight)
+							sectionOuter.Size = UDim2.new(1, 0, 0, targetSectionHeight)
+							return
+						end
+						if not collapsed then section.Visible = true end
+						local holderTween = Tween(sectionContentHolder, sectionAnimationInfo, {
+							Size = UDim2.new(1, -2, 0, targetHeight)
+						})
+						Tween(sectionOuter, sectionAnimationInfo, {
+							Size = UDim2.new(1, 0, 0, targetSectionHeight)
+						}):Play()
+						collapseTween = holderTween
+						local activeTween = collapseTween
+						activeTween.Completed:Connect(function()
+							if collapseTween ~= activeTween then return end
+							if collapsed then section.Visible = false end
+							collapseTween = nil
+						end)
+						collapseTween:Play()
+					end
+					-- мгновенно, без анимации и без сейва — для стартовой инициализации и загрузки конфига
+					local function applyCollapsed(state)
+						collapsed = state
+						sectionArrow.Rotation = state and 0 or 90
+						syncSectionContentHeight(false)
+					end
+					-- с анимацией + сохранить состояние в конфиг (клик по хедеру / :SetCollapsed)
+					local function setCollapsed(state)
+						collapsed = state
+						Tween(sectionArrow, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+							Rotation = state and 0 or 90
+						}):Play()
+						syncSectionContentHeight(true)
+						task.spawn(function() pcall(function() MacLib:AutoSave() end) end)
+					end
+
+					-- ре-синк при изменении контента (добавили виджет / открыли дропдаун)
+					sectionContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+						if not collapsed and not collapseTween then syncSectionContentHeight(false) end
+					end)
+					-- ФИКС: контент не виден на изначально открытом табе, пока не отрендерится.
+					-- Ловим момент, когда секция получает реальный размер (таб стал видимым) — и пересчитываем.
+					section:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+						if not collapsed and not collapseTween then syncSectionContentHeight(false) end
+					end)
+					-- добить ре-синк за несколько кадров после создания (пока лэйаут/текст досчитываются)
+					task.spawn(function()
+						for _ = 1, 5 do
+							task.wait()
+							if not sectionOuter.Parent then break end
+							if not collapsed and not collapseTween then syncSectionContentHeight(false) end
+						end
+					end)
+
+					sectionHeader.MouseEnter:Connect(function()
+						Tween(sectionHeaderTitle, TweenInfo.new(0.15, Enum.EasingStyle.Sine), { TextTransparency = 0.15 }):Play()
+						Tween(sectionArrow, TweenInfo.new(0.15, Enum.EasingStyle.Sine), { TextTransparency = 0.15 }):Play()
+					end)
+					sectionHeader.MouseLeave:Connect(function()
+						Tween(sectionHeaderTitle, TweenInfo.new(0.15, Enum.EasingStyle.Sine), { TextTransparency = 0.35 }):Play()
+						Tween(sectionArrow, TweenInfo.new(0.15, Enum.EasingStyle.Sine), { TextTransparency = 0.35 }):Play()
+					end)
+					sectionHeader.MouseButton1Click:Connect(function()
+						setCollapsed(not collapsed)
+					end)
+
+					function SectionFunctions:SetCollapsed(State) setCollapsed(State) end
+					function SectionFunctions:GetCollapsed() return collapsed end
+					function SectionFunctions:LoadCollapsed(State) applyCollapsed(State == true) end   -- restore из конфига (без анимации/сейва)
+					function SectionFunctions:UpdateName(NewName) sectionHeaderTitle.Text = NewName end
+
+					-- CONFIG: авто-регистрация секции для сохранения состояния сворачивания между перезаходами.
+					-- Флаг = Settings.Flag, иначе "SEC_<Name>" (с дедупом при одинаковых именах).
+					SectionFunctions.Class = "Section"
+					SectionFunctions.IgnoreConfig = false
+					local sectionFlag = SectionFunctions.Settings.Flag or (sectionTitle and ("SEC_" .. tostring(sectionTitle)))
+					if sectionFlag and MacLib.Options then
+						local f, n = sectionFlag, 1
+						while MacLib.Options[f] do n = n + 1; f = sectionFlag .. "_" .. n end
+						MacLib.Options[f] = SectionFunctions
+					end
+
+					-- начальное состояние БЕЗ анимации: иначе стартовый твин держит collapseTween и
+					-- блокирует ре-синк высоты, пока хаб добавляет виджеты -> контент не виден до ручного тогла
+					applyCollapsed(SectionFunctions.Settings.Collapsed == true)
 				end
-
-				local sectionUICorner = Instance.new("UICorner")
-				sectionUICorner.Name = "SectionUICorner"
-				sectionUICorner.Parent = section
-
-				local sectionUIStroke = Instance.new("UIStroke")
-				sectionUIStroke.Name = "SectionUIStroke"
-				sectionUIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-				sectionUIStroke.Color = Color3.fromRGB(255, 255, 255)
-				sectionUIStroke.Transparency = 0.95
-				sectionUIStroke.Parent = section
-
-				local sectionUIListLayout = Instance.new("UIListLayout")
-				sectionUIListLayout.Name = "SectionUIListLayout"
-				sectionUIListLayout.Padding = UDim.new(0, 10)
-				sectionUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-				sectionUIListLayout.Parent = section
-
-				local sectionUIPadding = Instance.new("UIPadding")
-				sectionUIPadding.Name = "SectionUIPadding"
-				sectionUIPadding.PaddingBottom = UDim.new(0, 15)
-				sectionUIPadding.PaddingLeft = UDim.new(0, 14)
-				sectionUIPadding.PaddingRight = UDim.new(0, 12)
-				sectionUIPadding.PaddingTop = UDim.new(0, 16)
-				sectionUIPadding.Parent = section
 
 				function SectionFunctions:Button(Settings, Flag)
 					local ButtonFunctions = {Settings = Settings}
@@ -5810,6 +6049,20 @@ function MacLib:Window(Settings)
 	end
 
 	local ClassParser = {
+		["Section"] = {
+			Save = function(Flag, data)
+				return {
+					type = "Section",
+					flag = Flag,
+					collapsed = (data.GetCollapsed and data:GetCollapsed()) or false
+				}
+			end,
+			Load = function(Flag, data)
+				if MacLib.Options[Flag] and MacLib.Options[Flag].LoadCollapsed then
+					MacLib.Options[Flag]:LoadCollapsed(data.collapsed)
+				end
+			end
+		},
 		["Toggle"] = {
 			Save = function(Flag, data)
 				return {
@@ -6145,18 +6398,15 @@ function MacLib:Window(Settings)
 		local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
 		if not success then return false, "Unable to decode JSON data." end
 
-		task.spawn(function()
-			-- Sequential load в одной короутине: важен детерминированный порядок
-			-- для зависимых элементов (например Mode→Map dropdown). Обёртка в
-			-- task.spawn нужна для обхода capability-ограничений в некоторых
-			-- executor'ах (раньше каждый Load был в своём task.spawn — это давало
-			-- race condition).
-			for _, option in next, decoded.objects do
-				if ClassParser[option.type] then
-					ClassParser[option.type].Load(option.flag, option)
-				end
+		-- Грузим СИНХРОННО на потоке вызывающего (НЕ task.spawn!): в MacSploit дочерний
+		-- task.spawn-поток теряет capability на доступ к Instance -> краш "lacking capability Plugin"
+		-- (валит Section-load / Tween тоглов). Вызывать LoadAutoLoadConfig с основного инжект-потока.
+		-- Порядок детерминированный (обычный for), каждый Load в pcall — битый пункт не рушит остальные.
+		for _, option in next, decoded.objects do
+			if ClassParser[option.type] then
+				pcall(function() ClassParser[option.type].Load(option.flag, option) end)
 			end
-		end)
+		end
 
 		return true
 	end
