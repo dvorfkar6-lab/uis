@@ -6056,13 +6056,15 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetScale(Scale)
-		-- baseUIScale может на миг терять capability → одиночная запись может не примениться. Ретраим с подтверждением
-		-- (читаем обратно == Scale). _appliedScale обновляем ТОЛЬКО после подтверждённой записи → она = фактический масштаб.
+		-- baseUIScale может на миг терять capability → запись может не пройти. Ретраим, пока запись НЕ УСПЕШНА (pcall без
+		-- ошибки = baseUIScale доступен, масштаб применился). Тогда обновляем _appliedScale (guiScale считает высоты по ней).
+		-- Точное сравнение прочитанного значения НЕ используем — Roblox хранит Scale как float32, read-back ≠ double Scale.
 		task.spawn(function()
 			for _ = 1, 30 do
-				pcall(function() baseUIScale.Scale = Scale end)
-				local ok, val = pcall(function() return baseUIScale.Scale end)
-				if ok and val == Scale then _appliedScale = Scale; break end
+				if pcall(function() baseUIScale.Scale = Scale end) then
+					_appliedScale = Scale
+					break
+				end
 				task.wait(0.1)
 			end
 		end)
