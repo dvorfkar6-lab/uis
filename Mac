@@ -64,7 +64,7 @@ local function GetGui()
 	newGui.ResetOnSpawn = false
 	newGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	newGui.DisplayOrder = 2147483647
-	newGui.Name = "apelhub.com"
+	newGui.Name = "capalot.cc"
 
 	-- Список кандидатов для парента в порядке предпочтения.
 	-- Каждый кандидат — {name, fn}. Все вызовы в pcall, чтобы любая защищённая
@@ -76,9 +76,9 @@ local function GetGui()
 		return cg
 	end
 	local candidates = {
-		--{"gethui",         function() return (typeof(gethui) == "function") and gethui() or nil end},
-		--{"get_hidden_gui", function() return (typeof(get_hidden_gui) == "function") and get_hidden_gui() or nil end},
-		--{"CoreGui",        function() return safeCoreGui() end},
+		{"gethui",         function() return (typeof(gethui) == "function") and gethui() or nil end},
+		{"get_hidden_gui", function() return (typeof(get_hidden_gui) == "function") and get_hidden_gui() or nil end},
+		{"CoreGui",        function() return safeCoreGui() end},
 		{"PlayerGui",      function()
 			local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
 			if not pg then
@@ -192,6 +192,10 @@ function MacLib:Window(Settings)
 	local baseUIScale = Instance.new("UIScale")
 	baseUIScale.Name = "BaseUIScale"
 	baseUIScale.Parent = base
+	-- Применённый масштаб трекаем в ОБЫЧНОЙ переменной. guiScale/checkSize читают ЕЁ, а не baseUIScale.Scale (тот под
+	-- скрытым GUI на миги теряет capability). SetScale обновляет _appliedScale только после подтверждённой записи в
+	-- baseUIScale → переменная всегда совпадает с фактическим визуальным масштабом.
+	local _appliedScale = 1
 
 	local baseUICorner = Instance.new("UICorner")
 	baseUICorner.Name = "BaseUICorner"
@@ -1878,12 +1882,16 @@ function MacLib:Window(Settings)
 					local sectionAnimationInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 					local function guiScale()
-						local s = baseUIScale and baseUIScale.Scale
+						-- читаем ТРЕКАЕМЫЙ масштаб, а не baseUIScale.Scale (тот на миги теряет capability). _appliedScale
+						-- всегда = фактическому визуальному масштабу (SetScale обновляет её только после подтверждённой записи).
+						local s = _appliedScale
 						if type(s) ~= "number" or s <= 0 then return 1 end
 						return s
 					end
 					local function getExpandedHeight()
-						return (sectionContentLayout.AbsoluteContentSize.Y / guiScale()) + 4
+						local content = 0
+						pcall(function() content = sectionContentLayout.AbsoluteContentSize.Y end)
+						return (content / guiScale()) + 4
 					end
 					local function getSectionHeight(contentHeight)
 						local spacing = contentHeight > 0 and sectionUIListLayout.Padding.Offset or 0
@@ -1894,30 +1902,36 @@ function MacLib:Window(Settings)
 							+ sectionUIPadding.PaddingBottom.Offset
 					end
 					local function syncSectionContentHeight(animated)
-						if collapseTween then collapseTween:Cancel(); collapseTween = nil end
-						local targetHeight = collapsed and 0 or getExpandedHeight()
-						local targetSectionHeight = getSectionHeight(targetHeight)
-						if not animated then
-							section.Visible = not collapsed
-							sectionContentHolder.Size = UDim2.new(1, -2, 0, targetHeight)
-							sectionOuter.Size = UDim2.new(1, 0, 0, targetSectionHeight)
-							return
-						end
-						if not collapsed then section.Visible = true end
-						local holderTween = Tween(sectionContentHolder, sectionAnimationInfo, {
-							Size = UDim2.new(1, -2, 0, targetHeight)
-						})
-						Tween(sectionOuter, sectionAnimationInfo, {
-							Size = UDim2.new(1, 0, 0, targetSectionHeight)
-						}):Play()
-						collapseTween = holderTween
-						local activeTween = collapseTween
-						activeTween.Completed:Connect(function()
-							if collapseTween ~= activeTween then return end
-							if collapsed then section.Visible = false end
-							collapseTween = nil
+						-- 🔴 Весь синк высоты — под скрытым GUI (gethui/CoreGui). На первом запуске поток может потерять
+						-- capability посреди загрузки → любое чтение/запись Instance тут кидает "lacking capability Plugin"
+						-- и роняет создание секции (меню грузится частично). Оборачиваем ВСЁ в pcall: не удалось — секция
+						-- всё равно создаётся (размер добьётся ре-синком по AbsoluteContentSize/AbsoluteSize).
+						pcall(function()
+							if collapseTween then collapseTween:Cancel(); collapseTween = nil end
+							local targetHeight = collapsed and 0 or getExpandedHeight()
+							local targetSectionHeight = getSectionHeight(targetHeight)
+							if not animated then
+								section.Visible = not collapsed
+								sectionContentHolder.Size = UDim2.new(1, -2, 0, targetHeight)
+								sectionOuter.Size = UDim2.new(1, 0, 0, targetSectionHeight)
+								return
+							end
+							if not collapsed then section.Visible = true end
+							local holderTween = Tween(sectionContentHolder, sectionAnimationInfo, {
+								Size = UDim2.new(1, -2, 0, targetHeight)
+							})
+							Tween(sectionOuter, sectionAnimationInfo, {
+								Size = UDim2.new(1, 0, 0, targetSectionHeight)
+							}):Play()
+							collapseTween = holderTween
+							local activeTween = collapseTween
+							activeTween.Completed:Connect(function()
+								if collapseTween ~= activeTween then return end
+								if collapsed then section.Visible = false end
+								collapseTween = nil
+							end)
+							collapseTween:Play()
 						end)
-						collapseTween:Play()
 					end
 					-- мгновенно, без анимации и без сейва — для стартовой инициализации и загрузки конфига
 					local function applyCollapsed(state)
@@ -2645,11 +2659,12 @@ function MacLib:Window(Settings)
 					InputBox.AutomaticSize = Enum.AutomaticSize.X
 
 					local function checkSize()
-						local nameWidth = InputName.AbsoluteSize.X
-						local totalWidth = Input.AbsoluteSize.X
-
-						local maxWidth = (totalWidth - nameWidth - 20) / baseUIScale.Scale
-						Constraint.MaxSize = Vector2.new(maxWidth, 9e9)
+						pcall(function()
+							local nameWidth = InputName.AbsoluteSize.X
+							local totalWidth = Input.AbsoluteSize.X
+							local maxWidth = (totalWidth - nameWidth - 20) / _appliedScale
+							Constraint.MaxSize = Vector2.new(maxWidth, 9e9)
+						end)
 					end
 
 					task.defer(checkSize)
@@ -6041,11 +6056,19 @@ function MacLib:Window(Settings)
 	end
 
 	function WindowFunctions:SetScale(Scale)
-		task.spawn(function() pcall(function() baseUIScale.Scale = Scale end) end)
+		-- baseUIScale может на миг терять capability → одиночная запись может не примениться. Ретраим с подтверждением
+		-- (читаем обратно == Scale). _appliedScale обновляем ТОЛЬКО после подтверждённой записи → она = фактический масштаб.
+		task.spawn(function()
+			for _ = 1, 30 do
+				pcall(function() baseUIScale.Scale = Scale end)
+				local ok, val = pcall(function() return baseUIScale.Scale end)
+				if ok and val == Scale then _appliedScale = Scale; break end
+				task.wait(0.1)
+			end
+		end)
 	end
 	function WindowFunctions:GetScale()
-		local ok, val = pcall(function() return baseUIScale.Scale end)
-		return ok and val or 1
+		return _appliedScale
 	end
 
 	local ClassParser = {
