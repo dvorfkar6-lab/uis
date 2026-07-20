@@ -57,6 +57,118 @@ local assets = {
 	sliderhead = "rbxassetid://18772834246",
 }
 
+--// Lucide icons (Fluent-Renewed sprite atlas)
+-- Loaded once in the background, cached to disk (ApelHub/Icons.luau) so it never
+-- re-downloads, and never blocks UI construction. Icons that use Lucide names are
+-- applied the moment the module finishes loading; until then they just stay empty.
+local ICONS_URL = "https://raw.githubusercontent.com/dvorfkar6-lab/uis/main/Icons.luau"
+local ICONS_CACHE_PATH = MacLib.Folder .. "/Icons.luau"
+
+local IconsModule = nil        -- nil = loading, false = failed, table = ready
+local pendingIcons = {}        -- { {image = Instance, name = string}, ... } queued while loading
+local preloadedSheets = {}     -- [assetId] = true, so each sheet is fetched at most once
+
+local function _hasFS()
+	return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
+end
+
+local function _resolveIcon(image, name)
+	if not (IconsModule and typeof(IconsModule.SetIcon) == "function") then return end
+	if not image or not image.Parent then return end
+
+	pcall(IconsModule.SetIcon, IconsModule, image, name)
+
+	-- SetIcon just assigned the exact sheet this icon lives on (image.Image = icons_N).
+	-- Preload only that one sheet, once, in the background so it fills in without a
+	-- blank flash — and without pulling in any of the other sheets.
+	local sheet = image.Image
+	if sheet and sheet ~= "" and not preloadedSheets[sheet] then
+		preloadedSheets[sheet] = true
+		task.spawn(function()
+			pcall(function()
+				ContentProvider:PreloadAsync({ sheet })
+			end)
+		end)
+	end
+end
+
+-- Kick off the load in the background exactly once.
+task.spawn(function()
+	local source
+
+	-- 1) Try disk cache first (instant, no network).
+	if _hasFS() then
+		local ok, cached = pcall(function()
+			if isfile(ICONS_CACHE_PATH) then return readfile(ICONS_CACHE_PATH) end
+			return nil
+		end)
+		if ok and type(cached) == "string" and #cached > 0 then
+			source = cached
+		end
+	end
+
+	-- 2) No cache -> download once and persist it for next time.
+	if not source then
+		local ok, fetched = pcall(game.HttpGet, game, ICONS_URL)
+		if ok and type(fetched) == "string" and #fetched > 0 then
+			source = fetched
+			if _hasFS() then
+				pcall(function()
+					if not isfolder(MacLib.Folder) then makefolder(MacLib.Folder) end
+					writefile(ICONS_CACHE_PATH, fetched)
+				end)
+			end
+		end
+	end
+
+	-- 3) Compile the module. The module has no top-level PreloadAsync, so it returns
+	-- instantly; each sheet then loads lazily the first time an icon that uses it is shown.
+	if source then
+		local okC, mod = pcall(function()
+			local fn = loadstring(source)
+			return fn and fn()
+		end)
+		IconsModule = (okC and typeof(mod) == "table") and mod or false
+	else
+		IconsModule = false
+	end
+
+	-- 4) Flush any icons that were requested while we were still loading.
+	if IconsModule then
+		for _, req in ipairs(pendingIcons) do
+			_resolveIcon(req.image, req.name)
+		end
+	end
+	table.clear(pendingIcons)
+end)
+
+-- Applies either a raw asset id or a Lucide icon name to an ImageLabel/ImageButton.
+-- Value can be: "rbxassetid://...", "12345" / 12345, or a Lucide name like "settings".
+-- Raw ids apply instantly. Lucide names apply as soon as the module is ready
+-- (queued and back-filled if it hasn't loaded yet), so nothing blocks the UI.
+local function ApplyIcon(image, value)
+	if not image or value == nil then return end
+
+	local str = tostring(value)
+
+	-- Raw asset (rbxassetid://, rbxthumb://, http, or pure numeric id) -> instant.
+	if str:match("^rbxassetid://") or str:match("^rbxthumb://") or str:match("^https?://") or str:match("^%d+$") then
+		image.Image = str:match("^%d+$") and ("rbxassetid://" .. str) or str
+		return
+	end
+
+	-- Lucide icon name.
+	if IconsModule == nil then
+		-- Still loading: leave the icon empty for now, apply once ready.
+		table.insert(pendingIcons, { image = image, name = str })
+	elseif IconsModule then
+		_resolveIcon(image, str)
+	else
+		-- Module failed to load: fall back to treating the value as a raw string.
+		image.Image = str
+	end
+end
+
 --// Functions
 local function GetGui()
 	local newGui = Instance.new("ScreenGui")
@@ -1514,10 +1626,10 @@ function MacLib:Window(Settings)
 
 			local tabImage
 
-			if Settings.Image then
+			local tabIconValue = Settings.Icon or Settings.Image
+			if tabIconValue then
 				tabImage = Instance.new("ImageLabel")
 				tabImage.Name = "TabImage"
-				tabImage.Image = Settings.Image
 				tabImage.ImageTransparency = 0.5
 				tabImage.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				tabImage.BackgroundTransparency = 1
@@ -1525,6 +1637,7 @@ function MacLib:Window(Settings)
 				tabImage.BorderSizePixel = 0
 				tabImage.Size = UDim2.fromOffset(18, 18)
 				tabImage.Parent = tabSwitcher
+				ApplyIcon(tabImage, tabIconValue)
 			end
 
 			local tabSwitcherName = Instance.new("TextLabel")
@@ -6565,7 +6678,7 @@ function MacLib:Window(Settings)
 		button.BackgroundTransparency = Settings.AcrylicBlur and 0.05 or 0.1
 		button.BorderSizePixel = 0
 		button.AutoButtonColor = false
-		button.Image = Config.Icon or assets.transform
+		ApplyIcon(button, Config.Icon or assets.transform)
 		button.ImageColor3 = Color3.fromRGB(255, 255, 255)
 		button.ImageTransparency = 0.3
 		button.Parent = holder
