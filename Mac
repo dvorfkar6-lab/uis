@@ -176,7 +176,7 @@ local function GetGui()
 	newGui.ResetOnSpawn = false
 	newGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	newGui.DisplayOrder = 2147483647
-	newGui.Name = "capalot.cc"
+	newGui.Name = "wow.cc"
 
 	-- Список кандидатов для парента в порядке предпочтения.
 	-- Каждый кандидат — {name, fn}. Все вызовы в pcall, чтобы любая защищённая
@@ -6244,17 +6244,29 @@ function MacLib:Window(Settings)
 			end
 		},
 		["Keybind"] = {
+			-- FIX: the bound key is kept in a local upvalue, not in a `Bind` field. `data.Bind` is the
+			-- :Bind() METHOD, so typeof() returned "function", the check never passed and keybinds were
+			-- saved as nil. Read it through :GetBind() instead. Mouse binds are UserInputType, not KeyCode,
+			-- so store the enum type alongside the name and restore accordingly.
 			Save = function(Flag, data)
+				local b = (type(data.GetBind) == "function") and data:GetBind() or data.Bind
+				if typeof(b) ~= "EnumItem" then return { type = "Keybind", flag = Flag } end
 				return {
-					type = "Keybind", 
-					flag = Flag, 
-					bind = (typeof(data.Bind) == "EnumItem" and data.Bind.Name) or nil
+					type = "Keybind",
+					flag = Flag,
+					bind = b.Name,
+					bindType = tostring(b.EnumType)
 				}
 			end,
 			Load = function(Flag, data)
-				if MacLib.Options[Flag] and data.bind then
-					MacLib.Options[Flag]:Bind(Enum.KeyCode[data.bind])
+				if not (MacLib.Options[Flag] and data.bind) then return end
+				local key
+				if data.bindType == "UserInputType" then
+					key = Enum.UserInputType[data.bind]
+				else
+					key = Enum.KeyCode[data.bind]
 				end
+				if key then MacLib.Options[Flag]:Bind(key) end
 			end
 		},
 		["Dropdown"] = {
