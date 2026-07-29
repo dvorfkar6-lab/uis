@@ -1210,9 +1210,17 @@ function MacLib:Window(Settings)
 		local function IsNotNaN(x)
 			return x == x
 		end
+		-- 🔴 ФИКС (свёрнутое окно): RenderStepped НЕ ФАЙРИТСЯ, пока окно Roblox свёрнуто —
+		-- рендер-луп остановлен. При этом ViewportSize вырождается и ScreenPointToRay даёт NaN,
+		-- поэтому цикл ждал кадр, которого никогда не будет → вешал весь MacLib:Window()
+		-- (а значит и весь скрипт) до разворачивания окна.
+		-- Ждём через Heartbeat (task.wait тикает и в свёрнутом окне) + жёсткий таймаут:
+		-- блюр чисто косметический, ради него нельзя блокировать загрузку хаба.
+		local deadline = os.clock() + 5
 		local continue = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
 		while not continue do
-			RunService.RenderStepped:Wait()
+			if os.clock() > deadline then break end
+			task.wait()
 			continue = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
 		end
 	end
@@ -6794,16 +6802,23 @@ function MacLib:Window(Settings)
 		return MinimizerFunctions
 	end
 
-	macLib.Enabled = false
-
 	local assetList = {}
 	for _, assetId in pairs(assets) do
 		table.insert(assetList, assetId)
 	end
 
-	ContentProvider:PreloadAsync(assetList)
+	-- 🔴 ФИКС (свёрнутое окно): ContentProvider:PreloadAsync ЙЕЛДИТ намертво, пока окно
+	-- свёрнуто — декодирование ассетов идёт через рендер-пайплайн, который остановлен.
+	-- Синхронный вызов здесь держал MacLib:Window() и весь скрипт до разворачивания окна.
+	-- Отдаём UI сразу, ассеты догружаем в фоне (иконки и так подтягиваются лениво).
 	macLib.Enabled = true
 	windowState = true
+
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync(assetList)
+		end)
+	end)
 
 	return WindowFunctions
 end
