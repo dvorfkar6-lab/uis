@@ -1206,24 +1206,13 @@ function MacLib:Window(Settings)
 	frame.BackgroundTransparency = 1
 	frame.Name = HS:GenerateGUID(true)
 
-	do
-		local function IsNotNaN(x)
-			return x == x
-		end
-		-- 🔴 ФИКС (свёрнутое окно): RenderStepped НЕ ФАЙРИТСЯ, пока окно Roblox свёрнуто —
-		-- рендер-луп остановлен. При этом ViewportSize вырождается и ScreenPointToRay даёт NaN,
-		-- поэтому цикл ждал кадр, которого никогда не будет → вешал весь MacLib:Window()
-		-- (а значит и весь скрипт) до разворачивания окна.
-		-- Ждём через Heartbeat (task.wait тикает и в свёрнутом окне) + жёсткий таймаут:
-		-- блюр чисто косметический, ради него нельзя блокировать загрузку хаба.
-		local deadline = os.clock() + 5
-		local continue = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
-		while not continue do
-			if os.clock() > deadline then break end
-			task.wait()
-			continue = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
-		end
-	end
+	-- 🔴 ФИКС (свёрнутое окно): здесь раньше был блокирующий цикл
+	-- `while NaN do RunService.RenderStepped:Wait() end`. RenderStepped НЕ ФАЙРИТСЯ, пока
+	-- окно Roblox свёрнуто (рендер-луп остановлен), а ScreenPointToRay при вырожденном
+	-- вьюпорте отдаёт NaN → ждали кадр, которого не будет, и вешали весь MacLib:Window()
+	-- (а с ним и весь скрипт) до разворачивания окна.
+	-- Ожидание убрано полностью, NaN-проверка переехала внутрь UpdateOrientation (см. ниже):
+	-- кадр просто пропускается, а RenderStepped сам вызовет её, когда камера станет валидной.
 
 	local DrawQuad; do
 		local acos, max, pi, sqrt = math.acos, math.max, math.pi, math.sqrt
@@ -1338,6 +1327,8 @@ function MacLib:Window(Settings)
 		return true
 	end
 
+	local propsFetched = false
+
 	local function UpdateOrientation(fetchProps)
 		if not IsVisible(frame) or not acrylicBlur or unloaded then
 			for _, pt in pairs(parts) do
@@ -1374,14 +1365,22 @@ function MacLib:Window(Settings)
 				br = Vector2.new(c*(br.x - mid.x) - s*(br.y - mid.y), s*(br.x - mid.x) + c*(br.y - mid.y)) + mid
 			end
 		end
+		local originTL = camera:ScreenPointToRay(tl.x, tl.y, zIndex).Origin
+		-- 🔴 NaN-гвард вместо блокирующего ожидания кадра: при свёрнутом окне вьюпорт
+		-- вырожден и ScreenPointToRay отдаёт NaN (DrawQuad на нём даёт битые CFrame).
+		-- Просто пропускаем кадр — как только окно развернут, RenderStepped вызовет
+		-- функцию снова уже с валидной камерой, и propsFetched догонит инициализацию.
+		if originTL.X ~= originTL.X then return end
+
 		DrawQuad(
-			camera:ScreenPointToRay(tl.x, tl.y, zIndex).Origin, 
+			originTL,
 			camera:ScreenPointToRay(tr.x, tr.y, zIndex).Origin, 
 			camera:ScreenPointToRay(bl.x, bl.y, zIndex).Origin, 
 			camera:ScreenPointToRay(br.x, br.y, zIndex).Origin, 
 			parts
 		)
-		if fetchProps then
+		if fetchProps or not propsFetched then
+			propsFetched = true
 			for _, pt in pairs(parts) do
 				pt.Parent = camera
 			end
