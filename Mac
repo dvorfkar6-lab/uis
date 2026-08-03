@@ -6591,8 +6591,33 @@ function MacLib:Window(Settings)
 			return
 		end
 		
+		-- Lifetime: Luarmor отдаёт math.huge в LRM_SecondsLeft, либо -1 / 0 в auth_expire
+		if expiresAt == math.huge
+			or expiresAt == -1 or expiresAt == 0
+			or expiresAt == "-1" or expiresAt == "0"
+			or (type(expiresAt) == "string" and (expiresAt:find("Never") or expiresAt:find("Lifetime"))) then
+			keyTimerText.Text = "🔑 Key: Lifetime"
+			keyTimerText.Visible = true
+			return
+		end
+		
+		-- Unix timestamp: число или числовая строка. Мелкие значения трактуем
+		-- как остаток в секундах (LRM_SecondsLeft), крупные — как миллисекунды.
+		local function ParseUnix(value)
+			local n = tonumber(value)
+			if not n or n ~= n or n <= 0 then return nil end
+			if n > 1e12 then
+				n = math.floor(n / 1000)
+			end
+			if n < 1e9 then
+				return os.time() + math.floor(n)
+			end
+			return math.floor(n)
+		end
+		
 		-- НОВАЯ ФУНКЦИЯ: Парсинг формата MM/DD/YY_HH:MM
 		local function ParseCustomDate(dateString)
+			if type(dateString) ~= "string" then return nil end
 			local month, day, year, hour, min = dateString:match("(%d+)/(%d+)/(%d+)_(%d+):(%d+)")
 			if not month then return nil end
 			local fullYear = tonumber(year)
@@ -6611,6 +6636,7 @@ function MacLib:Window(Settings)
 		
 		-- СТАРАЯ ФУНКЦИЯ: Парсинг ISO8601 (на случай если API вернёт старый формат)
 		local function ParseISO8601(isoString)
+			if type(isoString) ~= "string" then return nil end
 			local year, month, day, hour, min, sec = isoString:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):([%d%.]+)")
 			if not year then return nil end
 			return os.time({
@@ -6642,8 +6668,8 @@ function MacLib:Window(Settings)
 			end
 		end
 		
-		-- Попытка парсинга сначала новым форматом, потом старым
-		local expiryTime = ParseCustomDate(expiresAt) or ParseISO8601(expiresAt)
+		-- Unix (Luarmor) -> кастомный формат -> ISO8601
+		local expiryTime = ParseUnix(expiresAt) or ParseCustomDate(expiresAt) or ParseISO8601(expiresAt)
 		
 		if not expiryTime then
 			keyTimerText.Text = "🔑 Key: Invalid date"
@@ -6653,10 +6679,16 @@ function MacLib:Window(Settings)
 		
 		keyTimerText.Visible = true
 		
+		local lastShown = nil
+		
 		local function UpdateTimer()
-			local currentTime = os.time()
-			local remaining = expiryTime - currentTime
-			keyTimerText.Text = FormatTimeRemaining(remaining)
+			local remaining = math.floor(expiryTime - os.time())
+			
+			-- Heartbeat идёт каждый кадр, а меняется текст раз в секунду
+			if remaining ~= lastShown then
+				lastShown = remaining
+				keyTimerText.Text = FormatTimeRemaining(remaining)
+			end
 			
 			if remaining <= 0 and keyTimerConnection then
 				keyTimerConnection:Disconnect()
