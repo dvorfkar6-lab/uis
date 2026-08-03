@@ -26,6 +26,26 @@ local function _sd(fn) return function(...) local a={...} task.spawn(function() 
 local Lighting = MacLib.GetService("Lighting")
 local Players = MacLib.GetService("Players")
 
+--// 🔴 РЕЕСТР КОННЕКТОВ НА ГЛОБАЛЬНЫЕ СИГНАЛЫ
+-- Instance:Destroy() сам разрывает подписки на события САМОГО инстанса и его потомков, поэтому все коннекты на
+-- кнопки/фреймы окна умирают вместе с ним. А вот подписки на UserInputService и RunService живут ВНЕ дерева окна:
+-- Unload их не трогал, замыкание продолжало держать ссылки на фреймы уничтоженного окна, и весь его UI оставался
+-- в памяти навсегда. На практике это ~100 МБ на каждый повторный запуск скрипта, плюс лишний RenderStepped-колбэк
+-- на мёртвое окно (он крутится каждый кадр и просаживает FPS). Собираем такие коннекты сюда и рвём в Unload.
+local MacLibGlobalConns = {}
+local function MacLibTrack(signal, fn)
+	local conn = signal:Connect(fn)
+	MacLibGlobalConns[#MacLibGlobalConns + 1] = conn
+	return conn
+end
+local function MacLibDisconnectGlobals()
+	for i = #MacLibGlobalConns, 1, -1 do
+		local conn = MacLibGlobalConns[i]
+		MacLibGlobalConns[i] = nil
+		pcall(function() conn:Disconnect() end)
+	end
+end
+
 --// Variables
 local isStudio = RunService:IsStudio()
 local LocalPlayer = Players.LocalPlayer
@@ -879,13 +899,13 @@ function MacLib:Window(Settings)
 		initialSidebarWidth = sidebar.AbsoluteSize.X
 	end)
 
-	UserInputService.InputEnded:Connect(function(input)
+	MacLibTrack(UserInputService.InputEnded, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			resizingContent = false
 		end
 	end)
 
-	UserInputService.InputChanged:Connect(function(input)
+	MacLibTrack(UserInputService.InputChanged, function(input)
 		if resizingContent and input.UserInputType == Enum.UserInputType.MouseMovement then
 			local deltaX = UserInputService:GetMouseLocation().X - initialMouseX
 			local newSidebarWidth = initialSidebarWidth + deltaX
@@ -1021,7 +1041,7 @@ function MacLib:Window(Settings)
 
 		interact.InputChanged:Connect(onDragUpdate)
 
-		UserInputService.InputChanged:Connect(function(input)
+		MacLibTrack(UserInputService.InputChanged, function(input)
 			if input == dragInput and dragging_ then
 				update(input)
 			end
@@ -1041,7 +1061,7 @@ function MacLib:Window(Settings)
 
 		base.InputChanged:Connect(onDragUpdate)
 
-		UserInputService.InputChanged:Connect(function(input)
+		MacLibTrack(UserInputService.InputChanged, function(input)
 			if input == dragInput and dragging_ then
 				update(input)
 			end
@@ -1158,7 +1178,7 @@ function MacLib:Window(Settings)
 	globalSettings.MouseLeave:Connect(function()
 		hovering = false
 	end)
-	UserInputService.InputEnded:Connect(_sd(function(inp)
+	MacLibTrack(UserInputService.InputEnded, _sd(function(inp)
 		if inp.UserInputType == Enum.UserInputType.MouseButton1 and toggled and not hovering then
 			toggle()
 		end
@@ -1394,7 +1414,7 @@ function MacLib:Window(Settings)
 
 	UpdateOrientation(true)
 
-	RunService.RenderStepped:Connect(UpdateOrientation)
+	MacLibTrack(RunService.RenderStepped, UpdateOrientation)
 
 	function WindowFunctions:GlobalSetting(Settings)
 		hasGlobalSetting = true
@@ -2627,7 +2647,7 @@ function MacLib:Window(Settings)
 						end
 					end)
 
-					UserInputService.InputChanged:Connect(function(input)
+					MacLibTrack(UserInputService.InputChanged, function(input)
 						if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 							SetValue(input)
 						end
@@ -2952,12 +2972,12 @@ function MacLib:Window(Settings)
 						focused = false
 					end)
 
-					UserInputService.InputBegan:Connect(function(inp)
+					MacLibTrack(UserInputService.InputBegan, function(inp)
 						if focused and not isBinding then
 							isBinding = true
 
 							local Event
-							Event = UserInputService.InputBegan:Connect(function(input)
+							Event = MacLibTrack(UserInputService.InputBegan, function(input)
 								if KeybindFunctions.Settings.Blacklist and (table.find(KeybindFunctions.KeybindFunctions.Settings.Blacklist, input.KeyCode) or table.find(KeybindFunctions.Settings.Blacklist, input.UserInputType)) then
 									binderBox:ReleaseFocus()
 									resetFocusState()
@@ -2994,7 +3014,7 @@ function MacLib:Window(Settings)
 						end
 					end)
 
-					UserInputService.InputEnded:Connect(function(inp)
+					MacLibTrack(UserInputService.InputEnded, function(inp)
 						if not focused and not isBinding then
 							if inp.KeyCode == binded or inp.UserInputType == binded then
 								if Settings.onBindHeld then
@@ -4830,7 +4850,7 @@ function MacLib:Window(Settings)
 						end
 					end)
 
-					UserInputService.InputChanged:Connect(function(input)
+					MacLibTrack(UserInputService.InputChanged, function(input)
 						if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 							if SlideDown then
 								UpdateSlide(Mouse.X)
@@ -6078,6 +6098,18 @@ function MacLib:Window(Settings)
 			onUnloadCallback()
 		end
 		task.defer(function()
+			-- 🔴 Сперва гасим акрил: его DepthOfFieldEffect и вспомогательные части живут в Lighting/workspace,
+			-- то есть ВНЕ дерева окна, и убирает их сам UpdateOrientation на следующем кадре. Отключи мы
+			-- RenderStepped раньше — эффект остался бы в Lighting навсегда.
+			if acrylicBlur then
+				acrylicBlur = false          -- UpdateOrientation на следующем кадре сам уберёт эффект и части
+				task.wait()
+			end
+			-- 🔴 Рвём подписки на ГЛОБАЛЬНЫЕ сигналы (UserInputService / RunService). Destroy() разрывает события
+			-- только самого инстанса и его потомков, а эти живут вне окна и держали замыкания со ссылками на весь
+			-- уничтоженный UI — окно оставалось в памяти целиком, и с каждым повторным запуском скрипта прибавлялось
+			-- ещё одно (плюс лишний покадровый RenderStepped на мёртвое окно).
+			MacLibDisconnectGlobals()
 			if activeMinimizerGui then
 				pcall(function() activeMinimizerGui:Destroy() end)
 				activeMinimizerGui = nil
@@ -6087,6 +6119,9 @@ function MacLib:Window(Settings)
 				keyTimerConnection = nil
 			end
 			pcall(function() macLib:Destroy() end)
+			-- MacLib.Options НАМЕРЕННО не чистим: по ней работает AutoSave, и опустошить её значит рискнуть
+			-- затереть конфиг пользователя пустышкой. Модуль и так уходит в мусор целиком, как только у старого
+			-- экземпляра скрипта не остаётся живых ссылок — ради этого и рвались глобальные коннекты выше.
 			unloaded = true
 		end)
 	end
@@ -6107,7 +6142,7 @@ function MacLib:Window(Settings)
 		})
 	end
 
-	UserInputService.InputEnded:Connect(_sd(function(inp, gpe)
+	MacLibTrack(UserInputService.InputEnded, _sd(function(inp, gpe)
 		if gpe then return end
 		if inp.KeyCode == MenuKeybind then
 			ToggleMenu()
@@ -6697,7 +6732,7 @@ function MacLib:Window(Settings)
 		end
 		
 		UpdateTimer()
-		keyTimerConnection = RunService.Heartbeat:Connect(UpdateTimer)
+		keyTimerConnection = MacLibTrack(RunService.Heartbeat, UpdateTimer)
 	end
 
 	function WindowFunctions:CreateMinimizer(Config)
@@ -6762,7 +6797,7 @@ function MacLib:Window(Settings)
 			end
 		end)
 
-		UserInputService.InputChanged:Connect(function(input)
+		MacLibTrack(UserInputService.InputChanged, function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				local delta = input.Position - dragStart
 				local newX = startPos.X.Offset + delta.X
